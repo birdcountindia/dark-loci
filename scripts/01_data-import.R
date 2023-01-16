@@ -123,7 +123,11 @@ tictoc::tic("Joining cell info to full data")
 data0 <- data %>% 
   st_as_sf(coords = c("LONGITUDE", "LATITUDE"), remove = F) %>% 
   st_join(g1cells_sf) %>% 
-  st_drop_geometry()
+  st_drop_geometry() %>% 
+  # using only complete lists >= 10 min to calculate completeness
+  filter(ALL.SPECIES.REPORTED == 1 & 
+           PROTOCOL.TYPE != "Incidental" &
+           DURATION.MINUTES >= 10)
 tictoc::toc()
 
 save(data0, file = "data/data0.RData")
