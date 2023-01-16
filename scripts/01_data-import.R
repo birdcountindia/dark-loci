@@ -105,12 +105,12 @@ totcells_dist <- districts_cells %>%
 
 
 
-rm(districtmap, indiamap, statemap, gridmapg1, gridmapg2, gridmapg3, gridmapg4,
+rm(indiamap, statemap, gridmapg1, gridmapg2, gridmapg3, gridmapg4,
    gridmapg1_IN, gridlevels, totalcells, areag2, areag3, areag4)
 
 tictoc::tic("Writing sf map objects")
 save(area, areag1, districts_cells, states_cells, districts_sf, india_sf, states_sf,
-     g1cells_sf,
+     g1cells_sf, districtmap, # non-sf required for KnowBR
      file = "data/maps_sf.RData")
 tictoc::toc()
 
