@@ -38,7 +38,9 @@ temp_sum <- data1 %>%
                              INV.C < 0.78 & INV.C >= 0.5 ~ "MID",
                              INV.C < 0.5 ~ "HIGH")) %>% 
   mutate(CONCERN = factor(CONCERN, levels = c("HIGH", "MID", "LOW"))) %>% 
-  arrange(CONCERN, desc(INV.C), N, STATE, COUNTY)
+  arrange(CONCERN, desc(INV.C), N, STATE, COUNTY) %>% 
+  # removing LOW concern for now to focus only on MID & HIGH
+  filter(CONCERN != "LOW")
 
 # in each state, how many of each category
 temp_sum2 <- temp_sum %>% 
@@ -46,10 +48,10 @@ temp_sum2 <- temp_sum %>%
   summarise(NO.DIST = n()) %>% 
   ungroup() %>% 
   pivot_wider(names_from = "CONCERN", values_from = "NO.DIST") %>% 
-  relocate(STATE, LOW, MID, HIGH) %>% 
-  set_colnames(c("STATE", "N.LOW", "N.MID", "N.HIGH")) %>% 
-  mutate(across(2:4, ~ replace_na(.x, 0))) %>% 
-  arrange(desc(N.HIGH), desc(N.MID), desc(N.LOW))
+  relocate(STATE, MID, HIGH) %>% 
+  set_colnames(c("STATE", "N.MID", "N.HIGH")) %>% 
+  mutate(across(2:3, ~ replace_na(.x, 0))) %>% 
+  arrange(desc(N.HIGH), desc(N.MID))
 
 write_xlsx(x = list("Dist. inv.-comp." = temp_sum,
                     "States concern" = temp_sum2),
@@ -71,15 +73,15 @@ plot1_base <- temp_sum %>%
 
 plot1 <- (plot1_base +
             geom_sf(aes(geometry = geometry, fill = INV.C)) +
-            scale_fill_viridis_c(option = "inferno", direction = -1, 
+            scale_fill_viridis_c(option = "inferno", 
                                  name = "Inventory (species)\ncompleteness")) |
   (plot1_base +
      geom_sf(aes(geometry = geometry, fill = CONCERN)) +
-     scale_fill_viridis_d(option = "inferno", direction = -1, 
+     scale_fill_viridis_d(option = "inferno", 
                           name = "Concern level")) |
   (plot1_base +
      geom_sf(aes(geometry = geometry, fill = N)) +
-     scale_fill_viridis_c(option = "inferno", direction = -1, 
+     scale_fill_viridis_c(option = "inferno", 
                           name = "Current no.\nof lists",
                           trans = "log10"))
 
@@ -102,19 +104,15 @@ plot2_base <- temp_sum2 %>%
 
 plot2 <- (plot2_base +
             geom_sf(aes(geometry = geometry, fill = N.HIGH)) +
-            scale_fill_viridis_c(option = "inferno", 
+            scale_fill_viridis_c(option = "inferno", direction = -1,
                                  name = "No. of high\nconcern districts")) |
   (plot2_base +
      geom_sf(aes(geometry = geometry, fill = N.MID)) +
-     scale_fill_viridis_c(option = "inferno", 
-                          name = "No. of medium\nconcern districts")) |
-  (plot2_base +
-     geom_sf(aes(geometry = geometry, fill = N.LOW)) +
-     scale_fill_viridis_c(option = "inferno", 
-                          name = "No. of low\nconcern districts"))
+     scale_fill_viridis_c(option = "inferno", direction = -1,
+                          name = "No. of medium\nconcern districts"))
 
 ggsave(plot2, filename = "output/plot2.png", 
-       dpi = 300, width = 36, height = 14, units = "in")  
+       dpi = 300, width = 24, height = 13, units = "in")  
 
 
 
