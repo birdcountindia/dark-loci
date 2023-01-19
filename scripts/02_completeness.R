@@ -21,29 +21,45 @@ calc_inv_comp <- function(s_exp, s_obs) {
 }
 
 
+# calculating S.EXP for each ecoregion, then INV.COMP per district, according to which 1-2
+# ecoregions it comes under
+data1 <- data0 %>% 
+  st_as_sf(coords = c("LONGITUDE", "LATITUDE")) %>% 
+  # should use list of districts from shapefile, because that is latest and will also 
+  # give names for districts with zero eBird lists
+  st_join(districts_sf) %>% 
+  # joining ecoregion data
+  st_join(ecoregions)
 
-temp <- data0 %>% 
+
+temp <- data1 %>% 
   # how many lists species reported from
-  group_by(COUNTY, COMMON.NAME) %>% 
+  group_by(ECOREGION, COMMON.NAME) %>% 
   mutate(SPEC.LISTS = n_distinct(SAMPLING.EVENT.IDENTIFIER)) %>% 
   filter(SPEC.LISTS %in% 1:2) %>% 
   # how many species of Q1 and Q2
   mutate(Q = ifelse(SPEC.LISTS == 1, "Q1", "Q2")) %>% 
-  group_by(COUNTY, Q) %>% 
+  group_by(ECOREGION, Q) %>% 
   summarise(Qn = n_distinct(COMMON.NAME)) %>% 
   pivot_wider(names_from = "Q", values_from = "Qn") %>% 
   mutate(Q1 = replace_na(Q1, 0),
          Q2 = replace_na(Q2, 0))
   
-data1 <- data0 %>% 
-  filter(!is.na(COUNTY)) %>% 
-  # number of lists (N) and species (s_obs) from district 
-  group_by(COUNTY) %>% 
+ecoregion_exp <- data1 %>% 
+  filter(!is.na(ECOREGION)) %>% 
+  # number of lists (N) and species (s_obs) from ecoregion 
+  group_by(ECOREGION) %>% 
   summarise(N = n_distinct(SAMPLING.EVENT.IDENTIFIER),
             S.OBS = n_distinct(COMMON.NAME)) %>% 
   left_join(temp) %>% 
-  # calculating S.EXP
-  mutate(S.EXP = calc_exp_spec(S.OBS, N, Q1, Q2) %>% floor()) %>% 
+  # calculating S.EXP for ecoregion
+  mutate(S.EXP = calc_exp_spec(S.OBS, N, Q1, Q2) %>% floor())
+
+data2 <- data1 %>% 
+  left_join(ecoregion_exp) %>% 
+  group_by(DISTRICT.NAME, S.OBS) %>% 
+  # if district falls under more than one ecoregion, taking mean of S.EXP for those regions
+  summarise(S.EXP = mean(S.EXP)) %>% 
   # calculating C
   mutate(INV.C = calc_inv_comp(S.EXP, S.OBS) %>% round(2))
   
