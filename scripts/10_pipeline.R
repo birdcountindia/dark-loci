@@ -110,23 +110,40 @@ plot1_base <- temp_sum %>%
         axis.title.x = element_blank(),
         axis.title.y = element_blank())
 
-plot1 <- (plot1_base +
+plot1 <- ((plot1_base +
             geom_sf(aes(geometry = geometry, fill = INV.C)) +
             scale_fill_viridis_c(option = "inferno", 
                                  name = "Inventory (species)\ncompleteness")) |
-  (plot1_base +
-     geom_sf(aes(geometry = geometry, fill = as.factor(CONCERN))) +
-     scale_fill_viridis_d(option = "inferno", direction = -1,
-                          name = "Concern level")) |
   (plot1_base +
      geom_sf(aes(geometry = geometry, fill = N.DIST)) +
      scale_fill_viridis_b(option = "inferno", 
                           breaks = n_bins$N.DIST, 
                           limits = c(min(n_bins$N.DIST), max(n_bins$N.DIST)),
-                          name = "Current no.\nof lists"))
-
+                          name = "Current no.\nof lists"))) /
+((plot1_base +
+    geom_sf(aes(geometry = geometry, fill = as.factor(CONCERN))) +
+    scale_fill_viridis_d(option = "inferno", direction = -1,
+                         name = "Concern level")) |
+   # map with three concern colours
+  (temp_sum %>% 
+     filter(CONCERN != 2) %>% 
+      left_join(districts_sf) %>% 
+      ggplot() +
+      # india outline
+      geom_sf(data = india_sf, fill = "#D3D6D9") +
+      theme_classic() +
+      theme(axis.line = element_blank(),
+            axis.text.x = element_blank(),
+            axis.text.y = element_blank(),
+            axis.ticks = element_blank(),
+            axis.title.x = element_blank(),
+            axis.title.y = element_blank()) +
+     geom_sf(aes(geometry = geometry, fill = as.factor(CONCERN))) +
+     scale_fill_viridis_d(option = "inferno", direction = -1,
+                          name = "Concern level"))) 
+  
 ggsave(plot1, filename = "output/plot1.png", 
-       dpi = 300, width = 36, height = 14, units = "in")  
+       dpi = 300, width = 24, height = 24, units = "in")  
 
 
 plot2_base <- temp_sum2 %>% 
