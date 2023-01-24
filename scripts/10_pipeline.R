@@ -66,6 +66,49 @@ temp_sum <- temp_sum %>%
   filter(CONCERN != 1) %>% 
   mutate(across(contains("THRESH."), ~ as.null(.)))
 
+
+
+# for action, need only two categories so reclassifying for three
+temp_sum_cat <- data2 %>% 
+  # join states
+  left_join(districts_sf) %>% 
+  st_as_sf() %>% 
+  st_make_valid() %>% # to prevent issue with largest join
+  st_join(states_sf %>% st_make_valid(), largest = T) %>% 
+  st_drop_geometry() %>% 
+  # reordering columns
+  select(STATE, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
+  relocate(STATE, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
+  # removing >=75% completeness cos of no concern
+  filter(!(INV.C >= 0.75))
+
+thresh1 <- seq(1, n_distinct(temp_sum_cat$DISTRICT.NAME), 
+               length.out = 4)[2:3] # we want only 3 groups
+
+thresh2 <- temp_sum_cat %>% 
+  distinct(DISTRICT.NAME, INV.C) %>% 
+  select(INV.C) %>% 
+  arrange(INV.C) %>% 
+  rownames_to_column("ROW") %>% 
+  # selecting thresholds
+  filter(ROW %in% floor(thresh1)) %>% 
+  pivot_wider(names_from = ROW, values_from = INV.C) %>% 
+  set_colnames(c("THRESH.1", "THRESH.2"))
+
+
+temp_sum_cat <- temp_sum_cat %>% 
+  bind_cols(thresh2) %>% 
+  # levels of incompleteness based on thresholds 
+  mutate(CONCERN = case_when(INV.C < 0.75 & INV.C >= THRESH.2 ~ "LOW",
+                             INV.C < THRESH.2 & INV.C >= THRESH.1 ~ "MID",
+                             INV.C < THRESH.1 ~ "HIGH")) %>% 
+  mutate(CONCERN = factor(CONCERN, levels = c("LOW", "MID", "HIGH"))) %>% 
+  # removing LOW concern for now to focus only on MID & HIGH
+  filter(CONCERN != "LOW") %>% 
+  arrange(desc(CONCERN), INV.C, desc(N.DIST), STATE, DISTRICT.NAME) %>% 
+  mutate(across(contains("THRESH."), ~ as.null(.)))
+
+
 # in each state, how many of each category
 temp_sum2 <- temp_sum %>% 
   group_by(STATE, CONCERN) %>% 
@@ -125,8 +168,7 @@ plot1 <- ((plot1_base +
     scale_fill_viridis_d(option = "inferno", direction = -1,
                          name = "Concern level")) |
    # map with three concern colours
-  (temp_sum %>% 
-     filter(CONCERN != 2) %>% 
+  (temp_sum_cat %>% 
       left_join(districts_sf) %>% 
       ggplot() +
       # india outline
