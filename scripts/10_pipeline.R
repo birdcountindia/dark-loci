@@ -5,6 +5,7 @@ library(sf)
 library(magrittr)
 library(patchwork)
 library(writexl)
+library(readxl)
 
 
 # importing data ----------------------------------------------------------
@@ -19,106 +20,31 @@ source("scripts/01_data-import.R")
 source("scripts/02_completeness.R")
 
 
-### temporary summary to share
-
-temp_sum <- data2 %>% 
-  # join states
-  left_join(dists_sf %>% dplyr::select(-STATE.NAME, -AREA)) %>% 
-  st_as_sf() %>% 
-  st_make_valid() %>% # to prevent issue with largest join
-  st_join(states_sf %>% st_make_valid(), largest = T) %>% 
-  st_drop_geometry() %>% 
-  # reordering columns
-  dplyr::select(STATE.NAME, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
-  relocate(STATE.NAME, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
-  # removing >=75% completeness cos of no concern
-  filter(!(INV.C >= 0.75))
-
-thresh1 <- seq(1, n_distinct(temp_sum$DISTRICT.NAME), 
-                     length.out = 6)[2:5] # we want 5 groups
-  
-# selecting thresholds based on unique values of completeness, dividing into 5 groups
-thresh2 <- temp_sum %>% 
-  distinct(DISTRICT.NAME, INV.C) %>% 
-  select(INV.C) %>% 
-  arrange(INV.C) %>% 
-  rownames_to_column("ROW") %>% 
-  # selecting thresholds
-  filter(ROW %in% floor(thresh1)) %>% 
-  pivot_wider(names_from = ROW, values_from = INV.C) %>% 
-  set_colnames(c("THRESH.1", "THRESH.2", "THRESH.3", "THRESH.4"))
+### setting thresholds and classifying into concern categories
+source("scripts/03_thresholds.R")
 
 
-temp_sum <- temp_sum %>% 
-  bind_cols(thresh2) %>% 
-  # levels of incompleteness based on thresholds 
-  mutate(CONCERN = case_when(INV.C < 0.75 & INV.C >= THRESH.4 ~ 1,
-                             INV.C < THRESH.4 & INV.C >= THRESH.3 ~ 2,
-                             INV.C < THRESH.3 & INV.C >= THRESH.2 ~ 3,
-                             INV.C < THRESH.2 & INV.C >= THRESH.1 ~ 4,
-                             INV.C < THRESH.1 ~ 5)) %>% 
-  arrange(desc(CONCERN), INV.C, desc(N.DIST), STATE.NAME, DISTRICT.NAME) %>% 
-  # removing LOW concern for now to focus only on MID & HIGH
-  filter(CONCERN != 1) %>% 
-  mutate(across(contains("THRESH."), ~ as.null(.)))
+### summaries (metrics to monitor)
 
+# in each state, how many districts
+state_dists <- states_sf %>% 
+  dplyr::select(-AREA) %>% 
+  st_join(dists_sf %>% dplyr::select(-AREA, -STATE.NAME), join = st_covers) %>% 
+  st_drop_geometry()
 
-
-# for action, need only two categories so reclassifying for three
-temp_sum_cat <- data2 %>% 
-  # join states
-  left_join(dists_sf %>% dplyr::select(-STATE.NAME, -AREA)) %>% 
-  st_as_sf() %>% 
-  st_make_valid() %>% # to prevent issue with largest join
-  st_join(states_sf %>% st_make_valid(), largest = T) %>% 
-  st_drop_geometry() %>% 
-  # reordering columns
-  dplyr::select(STATE.NAME, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
-  relocate(STATE.NAME, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
-  # removing >=75% completeness cos of no concern
-  filter(!(INV.C >= 0.75))
-
-thresh1 <- seq(1, n_distinct(temp_sum_cat$DISTRICT.NAME), 
-               length.out = 4)[2:3] # we want only 3 groups
-
-thresh2 <- temp_sum_cat %>% 
-  distinct(DISTRICT.NAME, INV.C) %>% 
-  select(INV.C) %>% 
-  arrange(INV.C) %>% 
-  rownames_to_column("ROW") %>% 
-  # selecting thresholds
-  filter(ROW %in% floor(thresh1)) %>% 
-  pivot_wider(names_from = ROW, values_from = INV.C) %>% 
-  set_colnames(c("THRESH.1", "THRESH.2"))
-
-
-temp_sum_cat <- temp_sum_cat %>% 
-  bind_cols(thresh2) %>% 
-  # levels of incompleteness based on thresholds 
-  mutate(CONCERN = case_when(INV.C < 0.75 & INV.C >= THRESH.2 ~ "LOW",
-                             INV.C < THRESH.2 & INV.C >= THRESH.1 ~ "MID",
-                             INV.C < THRESH.1 ~ "HIGH")) %>% 
-  mutate(CONCERN = factor(CONCERN, levels = c("LOW", "MID", "HIGH"))) %>% 
-  # removing LOW concern for now to focus only on MID & HIGH
-  filter(CONCERN != "LOW") %>% 
-  arrange(desc(CONCERN), INV.C, desc(N.DIST), STATE.NAME, DISTRICT.NAME) %>% 
-  mutate(across(contains("THRESH."), ~ as.null(.)))
-
+### find out why some districts disappear
+# maybe don't do st_covers but do largest join
 
 # in each state, how many of each category
-temp_sum2 <- temp_sum %>% 
+summ_state <- concern_class %>% 
   group_by(STATE.NAME, CONCERN) %>% 
-  summarise(NO.DIST = n()) %>% 
+  summarise(NO.DIST = n_distinct(DISTRICT.NAME)) %>% 
   ungroup() %>% 
   filter(!is.na(STATE.NAME)) %>% 
   pivot_wider(names_from = "CONCERN", values_from = "NO.DIST") %>% 
   set_colnames(c("STATE.NAME", "CONCERN.2", "CONCERN.3", "CONCERN.4", "CONCERN.5")) %>% 
   mutate(across(2:5, ~ replace_na(.x, 0))) %>% 
   arrange(desc(CONCERN.5), desc(CONCERN.4), desc(CONCERN.3), desc(CONCERN.2))
-
-write_xlsx(x = list("Dist. inv.-comp." = temp_sum,
-                    "States concern" = temp_sum2),
-           path = "output/summary1.xlsx")
 
 
 # bins for number of lists per district
@@ -180,7 +106,7 @@ plot1 <- ((plot1_base +
      scale_fill_viridis_d(option = "inferno", direction = -1,
                           name = "Concern level"))) 
   
-ggsave(plot1, filename = "output/plot1.png", 
+ggsave(plot1, filename = "outputs/plot1.png", 
        dpi = 300, width = 24, height = 24, units = "in")  
 
 
@@ -210,7 +136,7 @@ plot2 <- (plot2_base +
      scale_fill_viridis_c(option = "inferno", direction = -1,
                           name = "No. of concern 3\ndistricts"))
 
-ggsave(plot2, filename = "output/plot2.png", 
+ggsave(plot2, filename = "outputs/plot2.png", 
        dpi = 300, width = 36, height = 14, units = "in")  
 
 
