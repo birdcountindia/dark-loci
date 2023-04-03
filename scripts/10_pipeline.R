@@ -9,12 +9,7 @@ library(writexl)
 
 # importing data ----------------------------------------------------------
 
-# # if 01_data-import.R not run fully to output RData files, uncomment and run below
-# source("scripts/01_data-import.R")
-
-# else 
-load("data/maps_sf.RData")
-load("data/data0.RData")
+source("scripts/01_data-import.R")
 
 
 # identifying Dark ------------------------------------------------------------------
@@ -28,20 +23,21 @@ source("scripts/02_completeness.R")
 
 temp_sum <- data2 %>% 
   # join states
-  left_join(districts_sf) %>% 
+  left_join(dists_sf %>% dplyr::select(-STATE.NAME, -AREA)) %>% 
   st_as_sf() %>% 
   st_make_valid() %>% # to prevent issue with largest join
   st_join(states_sf %>% st_make_valid(), largest = T) %>% 
   st_drop_geometry() %>% 
   # reordering columns
-  select(STATE, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
-  relocate(STATE, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
+  dplyr::select(STATE.NAME, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
+  relocate(STATE.NAME, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
   # removing >=75% completeness cos of no concern
   filter(!(INV.C >= 0.75))
 
 thresh1 <- seq(1, n_distinct(temp_sum$DISTRICT.NAME), 
                      length.out = 6)[2:5] # we want 5 groups
   
+# selecting thresholds based on unique values of completeness, dividing into 5 groups
 thresh2 <- temp_sum %>% 
   distinct(DISTRICT.NAME, INV.C) %>% 
   select(INV.C) %>% 
@@ -61,7 +57,7 @@ temp_sum <- temp_sum %>%
                              INV.C < THRESH.3 & INV.C >= THRESH.2 ~ 3,
                              INV.C < THRESH.2 & INV.C >= THRESH.1 ~ 4,
                              INV.C < THRESH.1 ~ 5)) %>% 
-  arrange(desc(CONCERN), INV.C, desc(N.DIST), STATE, DISTRICT.NAME) %>% 
+  arrange(desc(CONCERN), INV.C, desc(N.DIST), STATE.NAME, DISTRICT.NAME) %>% 
   # removing LOW concern for now to focus only on MID & HIGH
   filter(CONCERN != 1) %>% 
   mutate(across(contains("THRESH."), ~ as.null(.)))
@@ -71,14 +67,14 @@ temp_sum <- temp_sum %>%
 # for action, need only two categories so reclassifying for three
 temp_sum_cat <- data2 %>% 
   # join states
-  left_join(districts_sf) %>% 
+  left_join(dists_sf %>% dplyr::select(-STATE.NAME, -AREA)) %>% 
   st_as_sf() %>% 
   st_make_valid() %>% # to prevent issue with largest join
   st_join(states_sf %>% st_make_valid(), largest = T) %>% 
   st_drop_geometry() %>% 
   # reordering columns
-  select(STATE, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
-  relocate(STATE, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
+  dplyr::select(STATE.NAME, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
+  relocate(STATE.NAME, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
   # removing >=75% completeness cos of no concern
   filter(!(INV.C >= 0.75))
 
@@ -105,18 +101,18 @@ temp_sum_cat <- temp_sum_cat %>%
   mutate(CONCERN = factor(CONCERN, levels = c("LOW", "MID", "HIGH"))) %>% 
   # removing LOW concern for now to focus only on MID & HIGH
   filter(CONCERN != "LOW") %>% 
-  arrange(desc(CONCERN), INV.C, desc(N.DIST), STATE, DISTRICT.NAME) %>% 
+  arrange(desc(CONCERN), INV.C, desc(N.DIST), STATE.NAME, DISTRICT.NAME) %>% 
   mutate(across(contains("THRESH."), ~ as.null(.)))
 
 
 # in each state, how many of each category
 temp_sum2 <- temp_sum %>% 
-  group_by(STATE, CONCERN) %>% 
+  group_by(STATE.NAME, CONCERN) %>% 
   summarise(NO.DIST = n()) %>% 
   ungroup() %>% 
-  filter(!is.na(STATE)) %>% 
+  filter(!is.na(STATE.NAME)) %>% 
   pivot_wider(names_from = "CONCERN", values_from = "NO.DIST") %>% 
-  set_colnames(c("STATE", "CONCERN.2", "CONCERN.3", "CONCERN.4", "CONCERN.5")) %>% 
+  set_colnames(c("STATE.NAME", "CONCERN.2", "CONCERN.3", "CONCERN.4", "CONCERN.5")) %>% 
   mutate(across(2:5, ~ replace_na(.x, 0))) %>% 
   arrange(desc(CONCERN.5), desc(CONCERN.4), desc(CONCERN.3), desc(CONCERN.2))
 
@@ -141,7 +137,7 @@ n_bins <- n_bins %>%
 
 
 plot1_base <- temp_sum %>% 
-  left_join(districts_sf) %>% 
+  left_join(dists_sf %>% dplyr::select(-STATE.NAME, -AREA)) %>% 
   ggplot() +
   # india outline
   geom_sf(data = india_sf, fill = "#D3D6D9") +
@@ -154,22 +150,22 @@ plot1_base <- temp_sum %>%
         axis.title.y = element_blank())
 
 plot1 <- ((plot1_base +
-            geom_sf(aes(geometry = geometry, fill = INV.C)) +
+            geom_sf(aes(geometry = DISTRICT.GEOM, fill = INV.C)) +
             scale_fill_viridis_c(option = "inferno", 
                                  name = "Inventory (species)\ncompleteness")) |
   (plot1_base +
-     geom_sf(aes(geometry = geometry, fill = N.DIST)) +
+     geom_sf(aes(geometry = DISTRICT.GEOM, fill = N.DIST)) +
      scale_fill_viridis_b(option = "inferno", 
                           breaks = n_bins$N.DIST, 
                           limits = c(min(n_bins$N.DIST), max(n_bins$N.DIST)),
                           name = "Current no.\nof lists"))) /
 ((plot1_base +
-    geom_sf(aes(geometry = geometry, fill = as.factor(CONCERN))) +
+    geom_sf(aes(geometry = DISTRICT.GEOM, fill = as.factor(CONCERN))) +
     scale_fill_viridis_d(option = "inferno", direction = -1,
                          name = "Concern level")) |
    # map with three concern colours
   (temp_sum_cat %>% 
-      left_join(districts_sf) %>% 
+      left_join(dists_sf) %>% 
       ggplot() +
       # india outline
       geom_sf(data = india_sf, fill = "#D3D6D9") +
@@ -180,7 +176,7 @@ plot1 <- ((plot1_base +
             axis.ticks = element_blank(),
             axis.title.x = element_blank(),
             axis.title.y = element_blank()) +
-     geom_sf(aes(geometry = geometry, fill = as.factor(CONCERN))) +
+     geom_sf(aes(geometry = DISTRICT.GEOM, fill = as.factor(CONCERN))) +
      scale_fill_viridis_d(option = "inferno", direction = -1,
                           name = "Concern level"))) 
   
@@ -202,15 +198,15 @@ plot2_base <- temp_sum2 %>%
         axis.title.y = element_blank())
 
 plot2 <- (plot2_base +
-            geom_sf(aes(geometry = geometry, fill = CONCERN.5)) +
+            geom_sf(aes(geometry = STATE.GEOM, fill = CONCERN.5)) +
             scale_fill_viridis_c(option = "inferno", direction = -1,
                                  name = "No. of concern 5\ndistricts")) |
   (plot2_base +
-     geom_sf(aes(geometry = geometry, fill = CONCERN.4)) +
+     geom_sf(aes(geometry = STATE.GEOM, fill = CONCERN.4)) +
      scale_fill_viridis_c(option = "inferno", direction = -1,
                           name = "No. of concern 4\ndistricts")) |
   (plot2_base +
-     geom_sf(aes(geometry = geometry, fill = CONCERN.3)) +
+     geom_sf(aes(geometry = STATE.GEOM, fill = CONCERN.3)) +
      scale_fill_viridis_c(option = "inferno", direction = -1,
                           name = "No. of concern 3\ndistricts"))
 

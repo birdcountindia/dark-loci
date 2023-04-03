@@ -54,22 +54,22 @@ ecoregions <- ecoregions %>%
 tictoc::tic("Spatial joins of districts and ecoregions to main data")
 data1 <- data0 %>% 
   st_as_sf(coords = c("LONGITUDE", "LATITUDE")) %>% 
-  # should use list of districts from shapefile, because that is latest and will also 
-  # include districts with zero eBird lists
   st_set_crs(st_crs(ecoregions)) %>% 
-  st_join(districts_sf %>% st_set_crs(st_crs(ecoregions))) %>% 
   # joining ecoregion data
   st_join(ecoregions)
-tictoc::toc() # 22 mins
+tictoc::toc() # 28 sec
 
 # linking districts to ecoregions
 eco_dist_link <- ecoregions %>% 
-  st_join(districts_sf %>% st_set_crs(st_crs(ecoregions))) %>% 
+  st_join(dists_sf) %>% 
   st_drop_geometry() %>% 
   distinct(DISTRICT.NAME, ECOREGION)
 
-temp1 <- data1 %>% 
-  st_drop_geometry() %>% 
+temp1 <- data %>% 
+  # joining ecoregion information
+  left_join(data1 %>% 
+              st_drop_geometry() %>% 
+              dplyr::select(SAMPLING.EVENT.IDENTIFIER, ECOREGION, DISTRICT.NAME)) %>% 
   # how many lists species reported from
   group_by(ECOREGION, COMMON.NAME) %>% 
   mutate(SPEC.LISTS = n_distinct(SAMPLING.EVENT.IDENTIFIER)) %>% 
@@ -82,8 +82,11 @@ temp1 <- data1 %>%
   mutate(Q1.ECO = replace_na(Q1, 0),
          Q2.ECO = replace_na(Q2, 0))
   
-ecoregion_exp <- data1 %>% 
-  st_drop_geometry() %>% 
+ecoregion_exp <- data %>% 
+  # joining ecoregion information
+  left_join(data1 %>% 
+              st_drop_geometry() %>% 
+              dplyr::select(SAMPLING.EVENT.IDENTIFIER, ECOREGION, DISTRICT.NAME)) %>% 
   filter(!is.na(ECOREGION)) %>% 
   # number of lists (N) and species (s_obs) from ecoregion 
   group_by(ECOREGION) %>% 
@@ -99,8 +102,11 @@ ecoregion_exp <- data1 %>%
   summarise(S.EXP.ECO = floor(mean(S.EXP.ECO)))
 
 
-temp2 <- data1 %>% 
-  st_drop_geometry() %>% 
+temp2 <- data %>% 
+  # joining ecoregion information
+  left_join(data1 %>% 
+              st_drop_geometry() %>% 
+              dplyr::select(SAMPLING.EVENT.IDENTIFIER, ECOREGION, DISTRICT.NAME)) %>% 
   # how many lists species reported from
   group_by(DISTRICT.NAME, COMMON.NAME) %>% 
   mutate(SPEC.LISTS = n_distinct(SAMPLING.EVENT.IDENTIFIER)) %>% 
@@ -115,8 +121,11 @@ temp2 <- data1 %>%
   rename(Q1.DIST = Q1,
          Q2.DIST = Q2)
 
-district_exp <- data1 %>% 
-  st_drop_geometry() %>% 
+district_exp <- data %>% 
+  # joining ecoregion information
+  left_join(data1 %>% 
+              st_drop_geometry() %>% 
+              dplyr::select(SAMPLING.EVENT.IDENTIFIER, ECOREGION, DISTRICT.NAME)) %>% 
   filter(!is.na(DISTRICT.NAME)) %>% 
   # number of lists (N) and species (s_obs) from district 
   group_by(DISTRICT.NAME) %>% 
