@@ -16,15 +16,19 @@ source("scripts/01_data-import.R")
 # identifying Dark ------------------------------------------------------------------
 
 ### district-wise completeness
-
 source("scripts/02_completeness.R")
-
 
 ### setting thresholds and classifying into concern categories
 source("scripts/03_thresholds.R")
 
 
-### summaries (metrics to monitor)
+# identifying Loci ------------------------------------------------------------------
+
+source("scripts/04_id-loci.R")
+
+
+# metric summaries to track and monitor ---------------------------------------------
+
 
 # in each state, how many districts
 state_dists <- dists_sf %>% 
@@ -151,8 +155,3 @@ ggsave(plot1, filename = "outputs/plot1.png",
 
 
 
-
-# identifying Loci ------------------------------------------------------------------
-
-
-#
