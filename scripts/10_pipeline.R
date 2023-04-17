@@ -10,16 +10,24 @@ library(readxl)
 
 # importing data ----------------------------------------------------------
 
+tictoc::tic("Data import completed")
 source("scripts/01_data-import.R")
-
+# load("../india-maps/outputs/maps_sf.RData")
+# load()
+# load("data/data0.RData")
+tictoc::toc() # 18 mins
 
 # identifying Dark ------------------------------------------------------------------
 
 ### district-wise completeness
+tictoc::tic("Districtwise completeness analysis finished")
 source("scripts/02_completeness.R")
+tictoc::toc() # 180 secs
 
 ### setting thresholds and classifying into concern categories
+tictoc::tic("Threshold setting and concern classification completed")
 source("scripts/03_thresholds.R")
+tictoc::toc() # 55 secs
 
 
 # identifying Loci ------------------------------------------------------------------

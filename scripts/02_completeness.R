@@ -148,4 +148,9 @@ data2 <- district_exp %>%
   mutate(INV.C = calc_inv_comp(S.EXP, S.OBS.DIST) %>% round(2))
   
   
+# writing -----------------------------------------------------------------
+
+save(data2, district_exp, ecoregion_exp, eco_dist_link, data1,
+     ecoregions, reclass, 
+     file = "data/02_completeness.RData")
 
