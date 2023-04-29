@@ -171,4 +171,32 @@ ggsave(plot1, filename = "outputs/plot1.png",
        dpi = 300, width = 24, height = 24, units = "in")  
 
 
+# proportions of concern districts per state
+plot2_base <- summ_state %>% 
+  left_join(states_sf) %>% 
+  ggplot() +
+  # india outline
+  geom_sf(data = india_sf, fill = "#D3D6D9") +
+  theme_classic() +
+  theme(axis.line = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank())
 
+plot2 <- (plot2_base +
+            geom_sf(aes(geometry = STATE.GEOM, fill = CONCERN.5)) +
+            scale_fill_viridis_c(option = "inferno", direction = -1,
+                                 name = "Prop. of concern 5\ndistricts")) |
+  (plot2_base +
+     geom_sf(aes(geometry = STATE.GEOM, fill = CONCERN.4)) +
+     scale_fill_viridis_c(option = "inferno", direction = -1,
+                          name = "Prop. of concern 4\ndistricts")) |
+  (plot2_base +
+     geom_sf(aes(geometry = STATE.GEOM, fill = CONCERN.3)) +
+     scale_fill_viridis_c(option = "inferno", direction = -1,
+                          name = "Prop. of concern 3\ndistricts"))
+
+ggsave(plot2, filename = "outputs/plot2.png", 
+       dpi = 300, width = 36, height = 14, units = "in")  
