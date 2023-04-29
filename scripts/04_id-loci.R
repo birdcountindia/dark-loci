@@ -12,7 +12,7 @@ dl1_list <- data.frame(STATE.NAME = c("Arunachal Pradesh", "Meghalaya", "Tripura
 dl2_list <- data.frame(DISTRICT.NAME = c(
   # perimeter
   "Siddharthnagar", "Basti", "Ambedkar Nagar", "Jaunpur", "Bhadohi", "Mirzapur", 
-  "Singrauli", "Sonbhadra", "Garhwa", "Palamu", "Chatra", "Hazaribagh", "Giridih", 
+  "Sonbhadra", 
   "Jamui", "Lakhisarai", "Begusarai", "Samastipur", "Darbhanga", "Madhubani", 
   "Sitamarhi", "Sheohar", "Purba Champaran", "Pashchim Champaran", "Kushinagar", 
   "Maharajganj", 
@@ -20,8 +20,9 @@ dl2_list <- data.frame(DISTRICT.NAME = c(
   "Sant Kabir Nagar", "Gorakhpur", "Azamgarh", "Varanasi", "Chandauli", 
   "Kaimur (bhabua)", "Rohtas", "Ghazipur", "Mau", "Deoria", "Gopalganj", "Siwan", 
   "Ballia", "Buxar", "Aurangabad", "Gaya", "Arwal", "Jehanabad", "Bhojpur", "Patna", 
-  "Saran", "Muzaffarpur", "Vaishali", "Nalanda", "Nawada", "Kodarma", "Sheikhpura"
-  ),
+  "Saran", "Muzaffarpur", "Vaishali", "Nalanda", "Nawada", "Sheikhpura"
+  ), 
+  # ignoring Chatra, Garhwa, Giridih, Hazaribagh, Kodarma, Palamu, Singrauli this time
   ID.DATE = "2023-04-01",
   ACTION.DATE = NA)
 
