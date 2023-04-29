@@ -11,7 +11,9 @@ temp0 <- data2 %>%
   st_drop_geometry() %>% 
   # reordering columns
   dplyr::select(STATE.NAME, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
-  relocate(STATE.NAME, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C)
+  relocate(STATE.NAME, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
+  # removing >=75% completeness cos of no concern
+  filter(!(INV.C >= 0.75))
 
 
 thresh_lev1 <- seq(1, n_distinct(temp0$DISTRICT.NAME), length.out = 6)[2:5] # we want 5 groups
@@ -64,13 +66,13 @@ concern_class <- temp0 %>%
 if (file.exists(class_path)) {
   
   # original threshold levels
-  class_orig <- read_xlsx(class_path) %>% 
+  concern_class_orig <- read_xlsx(class_path) %>% 
     distinct(STATE.NAME, DISTRICT.NAME, CONCERN.FINE, CONCERN.COARSE) %>% 
     rename(ORIG.CONCERN.FINE = CONCERN.FINE, 
            ORIG.CONCERN.COARSE = CONCERN.COARSE)
   
   concern_class <- concern_class %>% 
-    left_join(class_orig) %>% 
+    left_join(concern_class_orig) %>% 
     relocate(STATE.NAME, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C,
              ORIG.CONCERN.FINE, CONCERN.FINE, ORIG.CONCERN.COARSE, CONCERN.COARSE)
   
