@@ -40,6 +40,10 @@ darkloci2 <- dists_sf %>%
          DL.NAME = "Magadha")
 
 darkloci <- bind_rows(darkloci1, darkloci2) %>% 
+  st_drop_geometry() %>% 
+  mutate(AREA = NULL)
+
+darkloci_sf <- bind_rows(darkloci1, darkloci2) %>% 
   group_by(DL.NO, DL.NAME) %>% 
   summarise()
 

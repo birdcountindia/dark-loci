@@ -139,8 +139,8 @@ if (file.exists(class_path) &
   concern_class_upd <- read_xlsx(class_path) %>% 
     bind_rows(concern_class_cur) %>% 
     arrange(STATE.NAME, DISTRICT.NAME, YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE) %>% 
-    relocate(STATE.NAME, DISTRICT.NAME, YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, 
-             S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C)
+    relocate(STATE.NAME, DISTRICT.NAME, N.DIST, 
+             YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, S.OBS.DIST, S.EXP.DIST, S.EXP, INV.C)
   
   # writing objects
   write_xlsx(x = list("Concern classifications" = concern_class_upd),
