@@ -30,6 +30,19 @@ if (file.exists(thresh_path)) {
     
   } else {     
     
+    temp0 <- data2 %>% 
+      # join district geom then state names
+      left_join(dists_sf %>% dplyr::select(-STATE.NAME, -AREA)) %>% 
+      st_as_sf() %>% 
+      st_make_valid() %>% # to prevent issue with largest join
+      st_join(states_sf %>% st_make_valid(), largest = T) %>% 
+      st_drop_geometry() %>% 
+      # reordering columns
+      dplyr::select(STATE.NAME, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
+      relocate(STATE.NAME, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
+      # removing >=75% completeness cos of no concern
+      filter(!(INV.C >= 0.75))
+    
     # only use new thresholds if one year has passed
     
     if (!(cur_date - test1$DATE >= 365)) {
@@ -42,20 +55,6 @@ if (file.exists(thresh_path)) {
     } else {
       
       # since one year has passed, we define new thresholds
-      
-      temp0 <- data2 %>% 
-        # join district geom then state names
-        left_join(dists_sf %>% dplyr::select(-STATE.NAME, -AREA)) %>% 
-        st_as_sf() %>% 
-        st_make_valid() %>% # to prevent issue with largest join
-        st_join(states_sf %>% st_make_valid(), largest = T) %>% 
-        st_drop_geometry() %>% 
-        # reordering columns
-        dplyr::select(STATE.NAME, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
-        relocate(STATE.NAME, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
-        # removing >=75% completeness cos of no concern
-        filter(!(INV.C >= 0.75))
-      
       
       thresh_lev1 <- seq(1, n_distinct(temp0$DISTRICT.NAME), length.out = 6)[2:5] # we want 5 groups
       thresh_lev2 <- seq(1, n_distinct(temp0$DISTRICT.NAME), length.out = 4)[2:3] # we want only 3 groups
@@ -131,7 +130,14 @@ concern_class_cur <- temp0 %>%
 
 
 # each time updating new classifications to old ones
-if (file.exists(class_path) &
+if (!file.exists(class_path)) {
+  
+  concern_class_upd <- concern_class_cur %>% 
+    arrange(STATE.NAME, DISTRICT.NAME, YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE) %>% 
+    relocate(STATE.NAME, DISTRICT.NAME, N.DIST, 
+             YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, S.OBS.DIST, S.EXP.DIST, S.EXP, INV.C)
+  
+} else if (file.exists(class_path) &
     ((read_xlsx(class_path) %>% slice_tail())$YEAR != cur_year |
      ((read_xlsx(class_path) %>% slice_tail())$YEAR == cur_year & 
      (read_xlsx(class_path) %>% slice_tail())$MONTH != cur_month_num))) {
@@ -142,8 +148,8 @@ if (file.exists(class_path) &
     relocate(STATE.NAME, DISTRICT.NAME, N.DIST, 
              YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, S.OBS.DIST, S.EXP.DIST, S.EXP, INV.C)
   
-  # writing objects
-  write_xlsx(x = list("Concern classifications" = concern_class_upd),
-             path = class_path)
-  
-}
+} 
+
+# writing objects
+write_xlsx(x = list("Concern classifications" = concern_class_upd),
+           path = class_path)

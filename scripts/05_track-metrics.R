@@ -233,7 +233,7 @@ metric1_nat_cur <- concern_coarse %>%
   ungroup() %>% 
   # to calculate proportion
   mutate(TOT.DIST = n_distinct(dists_sf$DISTRICT.NAME),
-         PROP.DIST = 100*NO.DIST/TOT.DIST) %>% 
+         PROP.DIST = round(100*NO.DIST/TOT.DIST, 2)) %>% 
   dplyr::select(-NO.DIST, -TOT.DIST) %>% 
   complete(CONCERN.COARSE,
            fill = list(PROP.DIST = 0)) %>% 
@@ -254,7 +254,7 @@ metric1_state_cur <- concern_coarse %>%
   ungroup() %>% 
   # to calculate proportion
   left_join(state_dists) %>% # joins number of districts per state
-  mutate(PROP.DIST = 100*NO.DIST/TOT.DIST) %>% 
+  mutate(PROP.DIST = round(100*NO.DIST/TOT.DIST, 2)) %>% 
   dplyr::select(-NO.DIST, -TOT.DIST) %>% 
   filter(!is.na(STATE.NAME)) %>% 
   # filling zeroes
@@ -281,7 +281,7 @@ metric1_dl_cur <- concern_coarse %>%
   left_join(darkloci %>% 
               group_by(DL.NAME) %>% 
               dplyr::summarise(TOT.DIST = n_distinct(DISTRICT.NAME))) %>%
-  mutate(PROP.DIST = 100*NO.DIST/TOT.DIST) %>% 
+  mutate(PROP.DIST = round(100*NO.DIST/TOT.DIST, 2)) %>% 
   dplyr::select(-NO.DIST, -TOT.DIST) %>% 
   filter(!is.na(DL.NAME)) %>% 
   # filling zeroes
@@ -325,83 +325,92 @@ if (!file.exists("outputs/metric1_full.xlsx") &
   
   
   } else if (file.exists("outputs/metric1_full.xlsx") &
-             file.exists("outputs/metric1_track.xlsx") & 
-             ((metric1_nat_old %>% slice_tail())$YEAR != cur_year |
-              ((metric1_nat_old %>% slice_tail())$YEAR == cur_year & 
-               (metric1_nat_old %>% slice_tail())$MONTH != cur_month_num))) {
-  
-  metric1_nat_old <- read_xlsx("outputs/metric1_full.xlsx", sheet = 1)
-  metric1_state_old <- read_xlsx("outputs/metric1_full.xlsx", sheet = 2)
-  metric1_dl_old <- read_xlsx("outputs/metric1_full.xlsx", sheet = 3)
-  
-  # for MoM later
-  metric1_nat_prev <- metric1_nat_old %>% slice_tail()
-  metric1_state_prev <- metric1_state_old %>% slice_tail()
-  metric1_dl_prev <- metric1_dl_old %>% slice_tail()
-  
-
-  metric1_nat_upd <- metric1_nat_old %>% 
-    bind_rows(metric1_nat_cur) %>% 
-    arrange(YEAR, MONTH)
-  
-  metric1_state_upd <- metric1_state_old %>% 
-    bind_rows(metric1_state_cur) %>% 
-    arrange(STATE.NAME, YEAR, MONTH)
-  
-  metric1_dl_upd <- metric1_dl_old %>% 
-    bind_rows(metric1_dl_cur) %>% 
-    arrange(DL.NAME, YEAR, MONTH)
-  
-  # writing objects
-  write_xlsx(x = list("Country" = metric1_nat_upd,
-                      "States" = metric1_state_upd,
-                      "Dark clusters" = metric1_dl_upd),
-             path = "outputs/metric1_full.xlsx")
-  
-
-  # only current month in focus with MoM
-  # retain only High Concern
-  mom_nat <- metric1_nat_prev %>% 
-    bind_rows(metric1_nat_cur %>% mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL)) %>% 
-    arrange(YEAR, MONTH) %>% 
-    pivot_wider(names_from = "MONTH", values_from = "CONCERN.HIGH") %>% 
-    magrittr::set_colnames(c("OLD", "CUR")) %>% 
-    dplyr::summarise(MoM = 100*(CUR - OLD)/OLD)
-  
-  mom_state <- metric1_state_prev %>% 
-    bind_rows(metric1_state_cur %>% mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL)) %>% 
-    arrange(YEAR, MONTH) %>% 
-    group_by(STATE.NAME) %>% 
-    pivot_wider(names_from = "MONTH", values_from = "CONCERN.HIGH") %>% 
-    magrittr::set_colnames(c("OLD", "CUR")) %>% 
-    dplyr::summarise(MoM = 100*(CUR - OLD)/OLD)
-  
-  mom_dl <- metric1_dl_prev %>% 
-    bind_rows(metric1_dl_cur %>% mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL)) %>% 
-    arrange(YEAR, MONTH) %>% 
-    group_by(DL.NAME) %>% 
-    pivot_wider(names_from = "MONTH", values_from = "CONCERN.HIGH") %>% 
-    magrittr::set_colnames(c("OLD", "CUR")) %>% 
-    dplyr::summarise(MoM = 100*(CUR - OLD)/OLD)
-
-  
-  metric1_nat_track <- metric1_nat_cur %>% bind_cols(mom_nat) %>% 
-    dplyr::select(-YEAR, -MONTH, -CONCERN.LOW, -CONCERN.MID)
-  metric1_state_track <- metric1_state_cur %>% bind_cols(mom_state) %>% 
-    dplyr::select(-YEAR, -MONTH, -CONCERN.LOW, -CONCERN.MID)
-  metric1_dl_track <- metric1_dl_cur %>% bind_cols(mom_dl) %>% 
-    dplyr::select(-YEAR, -MONTH, -CONCERN.LOW, -CONCERN.MID)
-  
-  
-  # writing objects
-  write_xlsx(x = list("Country" = metric1_nat_track,
-                      "States" = metric1_state_track,
-                      "Dark clusters" = metric1_dl_track),
-             path = "outputs/metric1_track.xlsx")
-  
+             file.exists("outputs/metric1_track.xlsx")) {
+    
+    metric1_nat_old <- read_xlsx("outputs/metric1_full.xlsx", sheet = 1)
+    metric1_state_old <- read_xlsx("outputs/metric1_full.xlsx", sheet = 2)
+    metric1_dl_old <- read_xlsx("outputs/metric1_full.xlsx", sheet = 3)
+    
+    if ((metric1_nat_old %>% slice_tail())$YEAR != cur_year |
+        ((metric1_nat_old %>% slice_tail())$YEAR == cur_year & 
+         (metric1_nat_old %>% slice_tail())$MONTH != cur_month_num)) {
+      
+      # for MoM later
+      metric1_nat_prev <- metric1_nat_old %>% slice_tail()
+      metric1_state_prev <- metric1_state_old %>% group_by(STATE.NAME) %>% slice_tail() %>% ungroup()
+      metric1_dl_prev <- metric1_dl_old %>% group_by(DL.NAME) %>% slice_tail() %>% ungroup()
+      
+      
+      metric1_nat_upd <- metric1_nat_old %>% 
+        bind_rows(metric1_nat_cur) %>% 
+        arrange(YEAR, MONTH)
+      
+      metric1_state_upd <- metric1_state_old %>% 
+        bind_rows(metric1_state_cur) %>% 
+        arrange(STATE.NAME, YEAR, MONTH)
+      
+      metric1_dl_upd <- metric1_dl_old %>% 
+        bind_rows(metric1_dl_cur) %>% 
+        arrange(DL.NAME, YEAR, MONTH)
+      
+      # writing objects
+      write_xlsx(x = list("Country" = metric1_nat_upd,
+                          "States" = metric1_state_upd,
+                          "Dark clusters" = metric1_dl_upd),
+                 path = "outputs/metric1_full.xlsx")
+      
+      
+      # only current month in focus with MoM
+      # retain only High Concern
+      mom_nat <- metric1_nat_prev %>% 
+        mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL) %>% 
+        bind_rows(metric1_nat_cur %>% mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL)) %>% 
+        arrange(YEAR, MONTH) %>% 
+        mutate(YEAR = NULL) %>% 
+        pivot_wider(names_from = "MONTH", values_from = "CONCERN.HIGH") %>% 
+        magrittr::set_colnames(c("OLD", "CUR")) %>% 
+        dplyr::summarise(MoM = round(100*(CUR - OLD)/OLD, 4))
+      
+      mom_state <- metric1_state_prev %>% 
+        mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL) %>% 
+        bind_rows(metric1_state_cur %>% mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL)) %>% 
+        arrange(YEAR, MONTH) %>% 
+        mutate(YEAR = NULL) %>% 
+        group_by(STATE.NAME) %>% 
+        pivot_wider(names_from = "MONTH", values_from = "CONCERN.HIGH") %>% 
+        magrittr::set_colnames(c("STATE.NAME", "OLD", "CUR")) %>% 
+        dplyr::summarise(MoM = round(100*(CUR - OLD)/OLD, 4))
+      
+      mom_dl <- metric1_dl_prev %>% 
+        mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL) %>% 
+        bind_rows(metric1_dl_cur %>% mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL)) %>% 
+        arrange(YEAR, MONTH) %>% 
+        mutate(YEAR = NULL) %>% 
+        group_by(DL.NAME) %>% 
+        pivot_wider(names_from = "MONTH", values_from = "CONCERN.HIGH") %>% 
+        magrittr::set_colnames(c("DL.NAME", "OLD", "CUR")) %>% 
+        dplyr::summarise(MoM = round(100*(CUR - OLD)/OLD, 4))
+      
+      
+      metric1_nat_track <- metric1_nat_cur %>% bind_cols(mom_nat) %>% 
+        dplyr::select(-YEAR, -MONTH, -CONCERN.LOW, -CONCERN.MID)
+      metric1_state_track <- metric1_state_cur %>% left_join(mom_state) %>% 
+        dplyr::select(-YEAR, -MONTH, -CONCERN.LOW, -CONCERN.MID)
+      metric1_dl_track <- metric1_dl_cur %>% left_join(mom_dl) %>% 
+        dplyr::select(-YEAR, -MONTH, -CONCERN.LOW, -CONCERN.MID)
+      
+      
+      # writing objects
+      write_xlsx(x = list("Country" = metric1_nat_track,
+                          "States" = metric1_state_track,
+                          "Dark clusters" = metric1_dl_track),
+                 path = "outputs/metric1_track.xlsx")
+      
   } else {
   
     print("Metrics for this month already available.")
+    
+  }
     
 }
 

@@ -40,6 +40,11 @@ tictoc::tic("Threshold setting and concern classification completed")
 source("scripts/03_thresholds.R")
 tictoc::toc() # 55 secs
 
+# proportion of high concern districts can change MoM, e.g., when some additional birding somewhere
+# results in addition of some species to the district, thus increasing S.EXP and decreasing INV.C
+# For underbirded districts, we can expect the percent high concern metric to not
+# follow a linear decrease, but to show a unimodal curve
+
 
 # identifying Dark Locus groups ------------------------------------------------------------------
 
