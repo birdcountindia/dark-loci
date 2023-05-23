@@ -47,7 +47,8 @@ darkloci_sf <- bind_rows(darkloci1, darkloci2) %>%
   group_by(DL.NO, DL.NAME) %>% 
   summarise()
 
-ggplot(dists_sf) + 
-  geom_sf() +
-  # dl boundaries
-  geom_sf(data = darkloci, aes(col = DL.NAME), fill = NA, colour = "red")
+# # to check outline
+# ggplot(dists_sf) + 
+#   geom_sf() +
+#   # dl boundaries
+#   geom_sf(data = darkloci_sf, aes(geometry = DISTRICT.GEOM, col = DL.NAME), fill = NA, colour = "red")

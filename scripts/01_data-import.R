@@ -11,6 +11,9 @@ require(sf)
 source("https://raw.githubusercontent.com/birdcountindia/bci-functions/main/summaries.R")
 source("https://raw.githubusercontent.com/birdcountindia/bci-functions/main/mapping.R")
 
+# region codes to link state/district names with their codes
+load(url("https://github.com/birdcountindia/ebird-datasets/raw/main/region_codes.RData"))
+
 # automated parameters ----------------------------------------------------
 
 
