@@ -7,15 +7,9 @@ library(patchwork)
 library(writexl)
 library(readxl)
 
-
-# importing data ----------------------------------------------------------
-
-tictoc::tic("Data import completed")
-source("scripts/01_data-import.R")
-# load("../india-maps/outputs/maps_sf.RData")
+load("../india-maps/outputs/maps_sf.RData")
+# load(url("https://github.com/birdcountindia/india-maps/raw/main/outputs/maps_sf.RData"))
 sf_use_s2(FALSE)
-# load("data/data0.RData")
-tictoc::toc() # 18 mins
 
 # in each state, how many districts
 state_dists <- dists_sf %>% 
@@ -25,6 +19,17 @@ state_dists <- dists_sf %>%
   st_drop_geometry() %>% 
   group_by(STATE.NAME) %>% 
   dplyr::summarise(TOT.DIST = n_distinct(DISTRICT.NAME))
+
+# importing data ----------------------------------------------------------
+
+tictoc::tic("Data import completed")
+
+source("scripts/01_data-import.R")
+# # if already run above previously, just unhash and run below
+# load("ebd_IN_relNov-2022.RData") # tweak maindatapath
+# load("data/data0.RData")
+
+tictoc::toc() # 18 mins
 
 
 # identifying Dark ------------------------------------------------------------------

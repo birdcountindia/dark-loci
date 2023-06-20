@@ -43,14 +43,13 @@ rel_month_lab <- rel_date %>% month(label = T, abbr = T)
 
 maindatapath <-  glue("../ebird-datasets/EBD/ebd_IN_rel{rel_month_lab}-{rel_year}.RData")
 slicedatapath <-  glue("../ebird-datasets/EBD/ebd_IN_rel{rel_month_lab}-{rel_year}_slice.RData")
-# maindatapath <-  glue("../ebird-datasets/EBD/ebd_IN_relNov-2022.RData")
-# slicedatapath <-  glue("../ebird-datasets/EBD/ebd_IN_relNov-2022_slice.RData")
+# maindatapath <-  "../ebird-datasets/EBD/ebd_IN_relNov-2022.RData"
+# slicedatapath <-  "../ebird-datasets/EBD/ebd_IN_relNov-2022_slice.RData"
 
 
 # joining mapvars --------------------------------------------------------
 
 # maps
-load("../india-maps/outputs/maps_sf.RData")
 load(maindatapath)
 load(slicedatapath)
 
