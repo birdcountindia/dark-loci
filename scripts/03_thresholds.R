@@ -145,12 +145,16 @@ if (!file.exists(class_path)) {
      ((read_xlsx(class_path) %>% slice_tail())$YEAR == cur_year & 
      (read_xlsx(class_path) %>% slice_tail())$MONTH != cur_month_num))) {
   
-  concern_class_upd <- read_xlsx(class_path) %>% 
-    bind_rows(concern_class_cur) %>% 
-    arrange(STATE.NAME, DISTRICT.NAME, YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE) %>% 
+  concern_class_cur <- concern_class_cur %>% 
     # adding codes
     left_join(region_codes %>% distinct(STATE, STATE.CODE, COUNTY, COUNTY.CODE), 
               by = c("STATE.NAME" = "STATE", "DISTRICT.NAME" = "COUNTY")) %>% 
+    relocate(STATE.CODE, COUNTY.CODE, STATE.NAME, DISTRICT.NAME, N.DIST, 
+             YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, S.OBS.DIST, S.EXP.DIST, S.EXP, INV.C)
+  
+  concern_class_upd <- read_xlsx(class_path) %>% 
+    bind_rows(concern_class_cur) %>% 
+    arrange(STATE.NAME, DISTRICT.NAME, YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE) %>% 
     relocate(STATE.CODE, COUNTY.CODE, STATE.NAME, DISTRICT.NAME, N.DIST, 
              YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, S.OBS.DIST, S.EXP.DIST, S.EXP, INV.C)
   
@@ -158,13 +162,19 @@ if (!file.exists(class_path)) {
            ((read_xlsx(class_path) %>% slice_tail())$YEAR == cur_year & 
              (read_xlsx(class_path) %>% slice_tail())$MONTH == cur_month_num)) {
   
+  # this is if running the script more than once in any particular month
+  
+  concern_class_cur <- concern_class_cur %>% 
+    # adding codes
+    left_join(region_codes %>% distinct(STATE, STATE.CODE, COUNTY, COUNTY.CODE), 
+              by = c("STATE.NAME" = "STATE", "DISTRICT.NAME" = "COUNTY")) %>% 
+    relocate(STATE.CODE, COUNTY.CODE, STATE.NAME, DISTRICT.NAME, N.DIST, 
+             YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, S.OBS.DIST, S.EXP.DIST, S.EXP, INV.C)
+  
   concern_class_upd <- read_xlsx(class_path) %>% 
     filter(!(YEAR == cur_year & MONTH == cur_month_num)) %>% 
     bind_rows(concern_class_cur) %>% 
     arrange(STATE.NAME, DISTRICT.NAME, YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE) %>% 
-    # adding codes
-    left_join(region_codes %>% distinct(STATE, STATE.CODE, COUNTY, COUNTY.CODE), 
-              by = c("STATE.NAME" = "STATE", "DISTRICT.NAME" = "COUNTY")) %>% 
     relocate(STATE.CODE, COUNTY.CODE, STATE.NAME, DISTRICT.NAME, N.DIST, 
              YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, S.OBS.DIST, S.EXP.DIST, S.EXP, INV.C)
   
