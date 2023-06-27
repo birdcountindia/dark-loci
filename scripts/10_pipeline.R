@@ -11,6 +11,9 @@ load("../india-maps/outputs/maps_sf.RData")
 # load(url("https://github.com/birdcountindia/india-maps/raw/main/outputs/maps_sf.RData"))
 sf_use_s2(FALSE)
 
+# region codes to link state/district names with their codes
+load(url("https://github.com/birdcountindia/ebird-datasets/raw/main/region_codes.RData"))
+
 # in each state, how many districts
 state_dists <- dists_sf %>% 
   st_drop_geometry() %>% 
@@ -19,6 +22,9 @@ state_dists <- dists_sf %>%
   st_drop_geometry() %>% 
   group_by(STATE.NAME) %>% 
   dplyr::summarise(TOT.DIST = n_distinct(DISTRICT.NAME))
+
+source("scripts/00_params.R")
+
 
 # importing data ----------------------------------------------------------
 

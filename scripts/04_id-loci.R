@@ -29,12 +29,12 @@ dl2_list <- data.frame(DISTRICT.NAME = c(
 #
 
 darkloci1 <- dists_sf %>% 
-  inner_join(dl1_list) %>% 
+  right_join(dl1_list) %>% 
   mutate(DL.NO = 1,
          DL.NAME = "Northeast")
 
 darkloci2 <- dists_sf %>% 
-  inner_join(dl2_list) %>% 
+  right_join(dl2_list) %>% 
   filter(!(STATE.NAME == "Maharashtra" & DISTRICT.NAME == "Aurangabad")) %>% 
   mutate(DL.NO = 2,
          DL.NAME = "Magadha")
