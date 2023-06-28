@@ -13,9 +13,6 @@ temp <- concern_class_upd %>%
             ORIG.INV.C = INV.C) %>%
   ungroup()
 
-
-# current status metrics ------------------------------------------------------------
-
 concern_fine <- concern_class_cur %>% 
   left_join(temp, by = c("STATE.NAME", "DISTRICT.NAME")) %>% 
   filter(!(ORIG.INV.C >= 0.75)) %>% 
@@ -27,74 +24,16 @@ concern_coarse <- concern_class_cur %>%
   mutate(CONCERN.COARSE = factor(CONCERN.COARSE, levels = c("LOW", "MID", "HIGH"))) %>% 
   filter(ORIG.CONCERN.COARSE != "LOW")
 
+# current status metrics ------------------------------------------------------------
+
 # in country, how many of each category
-status_nat <- concern_fine %>% 
-  # removing districts of no concern (NA)
-  filter(!is.na(CONCERN.FINE)) %>% 
-  group_by(CONCERN.FINE) %>% 
-  summarise(NO.DIST = n_distinct(DISTRICT.NAME)) %>% 
-  ungroup() %>% 
-  # to calculate proportion
-  mutate(TOT.DIST = n_distinct(dists_sf$DISTRICT.NAME),
-         PROP.DIST = NO.DIST/TOT.DIST) %>% 
-  dplyr::select(-NO.DIST, -TOT.DIST) %>% 
-  complete(CONCERN.FINE = 1:5,
-           fill = list(PROP.DIST = 0)) %>% 
-  ungroup() %>% 
-  pivot_wider(names_from = "CONCERN.FINE", values_from = "PROP.DIST") %>% 
-  set_colnames(c("CONCERN.1", "CONCERN.2", "CONCERN.3", "CONCERN.4", "CONCERN.5")) %>% 
-  mutate(across(everything(), ~ replace_na(.x, 0))) %>% 
-  arrange(desc(CONCERN.5), desc(CONCERN.4), desc(CONCERN.3), desc(CONCERN.2), desc(CONCERN.1))
+status_nat <- get_concern_summary(concern_fine, "nat", CONCERN.FINE)
 
 # in each state, how many of each category
-status_state <- concern_fine %>% 
-  # removing districts of no concern (NA)
-  filter(!is.na(CONCERN.FINE)) %>% 
-  group_by(STATE.NAME, CONCERN.FINE) %>% 
-  summarise(NO.DIST = n_distinct(DISTRICT.NAME)) %>% 
-  ungroup() %>% 
-  # to calculate proportion
-  left_join(state_dists) %>% # joins number of districts per state
-  mutate(PROP.DIST = NO.DIST/TOT.DIST) %>% 
-  dplyr::select(-NO.DIST, -TOT.DIST) %>% 
-  filter(!is.na(STATE.NAME)) %>% 
-  # filling zeroes
-  group_by(STATE.NAME) %>% 
-  complete(CONCERN.FINE = 1:5,
-           fill = list(PROP.DIST = 0)) %>% 
-  ungroup() %>% 
-  pivot_wider(names_from = "CONCERN.FINE", values_from = "PROP.DIST") %>% 
-  set_colnames(c("STATE.NAME", "CONCERN.1", "CONCERN.2", "CONCERN.3", "CONCERN.4", "CONCERN.5")) %>% 
-  mutate(across(2:6, ~ replace_na(.x, 0))) %>% 
-  arrange(desc(CONCERN.5), desc(CONCERN.4), desc(CONCERN.3), desc(CONCERN.2), desc(CONCERN.1)) %>% 
-  # adding state codes
-  left_join(region_codes %>% distinct(STATE, STATE.CODE), by = c("STATE.NAME" = "STATE"))
+status_state <- get_concern_summary(concern_fine, "state", CONCERN.FINE)
 
 # in each dark cluster, how many of each concern category
-status_dl <- concern_fine %>% 
-  # removing districts of no concern (NA)
-  filter(!is.na(CONCERN.FINE)) %>% 
-  inner_join(darkloci) %>% 
-  group_by(DL.NAME, CONCERN.FINE) %>% 
-  summarise(NO.DIST = n_distinct(DISTRICT.NAME)) %>% 
-  ungroup() %>% 
-  # to calculate proportion (joins number of districts per dark cluster)
-  left_join(darkloci %>% 
-              group_by(DL.NAME) %>% 
-              dplyr::summarise(TOT.DIST = n_distinct(DISTRICT.NAME))) %>%
-  mutate(PROP.DIST = NO.DIST/TOT.DIST) %>% 
-  dplyr::select(-NO.DIST, -TOT.DIST) %>% 
-  filter(!is.na(DL.NAME)) %>% 
-  # filling zeroes
-  group_by(DL.NAME) %>% 
-  complete(CONCERN.FINE = 1:5,
-           fill = list(PROP.DIST = 0)) %>% 
-  ungroup() %>% 
-  pivot_wider(names_from = "CONCERN.FINE", values_from = "PROP.DIST") %>% 
-  set_colnames(c("DL.NAME", "CONCERN.1", "CONCERN.2", "CONCERN.3", "CONCERN.4", "CONCERN.5")) %>% 
-  mutate(across(2:6, ~ replace_na(.x, 0))) %>% 
-  arrange(desc(CONCERN.5), desc(CONCERN.4), desc(CONCERN.3), desc(CONCERN.2), desc(CONCERN.1))
-
+status_dl <- get_concern_summary(concern_fine, "dl", CONCERN.FINE)
 
 # writing summary objects
 write_xlsx(x = list("Country" = status_nat,
@@ -241,79 +180,13 @@ ggsave(plot3,
 # metric 1: percentage high concern districts
 
 # in country, how many high concern
-metric1_nat_cur <- concern_coarse %>% 
-  # removing districts of no concern (NA)
-  filter(!is.na(CONCERN.COARSE)) %>% 
-  group_by(CONCERN.COARSE) %>% 
-  summarise(NO.DIST = n_distinct(DISTRICT.NAME)) %>% 
-  ungroup() %>% 
-  # to calculate proportion
-  mutate(TOT.DIST = n_distinct(dists_sf$DISTRICT.NAME),
-         PROP.DIST = round(100*NO.DIST/TOT.DIST, 2)) %>% 
-  dplyr::select(-NO.DIST, -TOT.DIST) %>% 
-  complete(CONCERN.COARSE,
-           fill = list(PROP.DIST = 0)) %>% 
-  ungroup() %>% 
-  pivot_wider(names_from = "CONCERN.COARSE", values_from = "PROP.DIST") %>% 
-  set_colnames(c("CONCERN.LOW", "CONCERN.MID", "CONCERN.HIGH")) %>% 
-  mutate(across(everything(), ~ replace_na(.x, 0))) %>% 
-  arrange(desc(CONCERN.HIGH), desc(CONCERN.MID), desc(CONCERN.LOW)) %>% 
-  mutate(YEAR = cur_year, MONTH = cur_month_num) %>% 
-  relocate(YEAR, MONTH, CONCERN.LOW, CONCERN.MID, CONCERN.HIGH)
+metric1_nat_cur <- get_concern_summary(concern_coarse, "nat", CONCERN.COARSE)
 
 # in each state, how many high concern
-metric1_state_cur <- concern_coarse %>% 
-  # removing districts of no concern (NA)
-  filter(!is.na(CONCERN.COARSE)) %>% 
-  group_by(STATE.NAME, CONCERN.COARSE) %>% 
-  summarise(NO.DIST = n_distinct(DISTRICT.NAME)) %>% 
-  ungroup() %>% 
-  # to calculate proportion
-  left_join(state_dists) %>% # joins number of districts per state
-  mutate(PROP.DIST = round(100*NO.DIST/TOT.DIST, 2)) %>% 
-  dplyr::select(-NO.DIST, -TOT.DIST) %>% 
-  filter(!is.na(STATE.NAME)) %>% 
-  # filling zeroes
-  group_by(STATE.NAME) %>% 
-  complete(CONCERN.COARSE,
-           fill = list(PROP.DIST = 0)) %>% 
-  ungroup() %>% 
-  pivot_wider(names_from = "CONCERN.COARSE", values_from = "PROP.DIST") %>% 
-  set_colnames(c("STATE.NAME", "CONCERN.LOW", "CONCERN.MID", "CONCERN.HIGH")) %>% 
-  mutate(across(2:4, ~ replace_na(.x, 0))) %>% 
-  arrange(desc(CONCERN.HIGH), desc(CONCERN.MID), desc(CONCERN.LOW)) %>% 
-  # adding state codes
-  left_join(region_codes %>% distinct(STATE, STATE.CODE), by = c("STATE.NAME" = "STATE")) %>% 
-  mutate(YEAR = cur_year, MONTH = cur_month_num) %>% 
-  relocate(STATE.CODE, STATE.NAME, YEAR, MONTH, CONCERN.LOW, CONCERN.MID, CONCERN.HIGH)
+metric1_state_cur <- get_concern_summary(concern_coarse, "state", CONCERN.COARSE)
 
 # in each dark cluster, how many high concern
-metric1_dl_cur <- concern_coarse %>% 
-  # removing districts of no concern (NA)
-  filter(!is.na(CONCERN.COARSE)) %>% 
-  inner_join(darkloci) %>% 
-  group_by(DL.NAME, CONCERN.COARSE) %>% 
-  summarise(NO.DIST = n_distinct(DISTRICT.NAME)) %>% 
-  ungroup() %>% 
-  # to calculate proportion (joins number of districts per dark cluster)
-  left_join(darkloci %>% 
-              group_by(DL.NAME) %>% 
-              dplyr::summarise(TOT.DIST = n_distinct(DISTRICT.NAME))) %>%
-  mutate(PROP.DIST = round(100*NO.DIST/TOT.DIST, 2)) %>% 
-  dplyr::select(-NO.DIST, -TOT.DIST) %>% 
-  filter(!is.na(DL.NAME)) %>% 
-  # filling zeroes
-  group_by(DL.NAME) %>% 
-  complete(CONCERN.COARSE,
-           fill = list(PROP.DIST = 0)) %>% 
-  ungroup() %>% 
-  pivot_wider(names_from = "CONCERN.COARSE", values_from = "PROP.DIST") %>% 
-  set_colnames(c("DL.NAME", "CONCERN.LOW", "CONCERN.MID", "CONCERN.HIGH")) %>% 
-  mutate(across(2:4, ~ replace_na(.x, 0))) %>% 
-  arrange(desc(CONCERN.HIGH), desc(CONCERN.MID), desc(CONCERN.LOW)) %>% 
-  mutate(YEAR = cur_year, MONTH = cur_month_num) %>% 
-  relocate(DL.NAME, YEAR, MONTH, CONCERN.LOW, CONCERN.MID, CONCERN.HIGH)
-
+metric1_dl_cur <- get_concern_summary(concern_coarse, "dl", CONCERN.COARSE)
 
 # each time updating new classifications to old ones
 if (!file.exists("outputs/metric1_full.xlsx") &
