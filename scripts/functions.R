@@ -145,4 +145,51 @@ get_concern_summary <- function(concern_data, scale, concern_col) {
 }
 
 
+# calculate MoM change --------------------------------------------------------------
+
+calc_mom <- function(level) {
+  
+  # MoM change (only current month in focus)
+  # retain only High Concern
+  
+  if (level == "nat") {
+    
+    metric_latest <- metric1_nat_latest
+    metric_cur <- metric1_nat_cur
+    new_colnames <- c("OLD", "CUR")
+    
+  } else if (level == "state") {
+    
+    metric_latest <- metric1_state_latest
+    metric_cur <- metric1_state_cur
+    new_colnames <- c("STATE.NAME", "STATE.CODE", "OLD", "CUR")
+    
+  } else if (level == "dl") {
+    
+    metric_latest <- metric1_dl_latest
+    metric_cur <- metric1_dl_cur
+    new_colnames <-c("DL.NAME", "OLD", "CUR")
+    
+  } else {
+    return("level should be one of {nat, state, dl}")
+  }
+
+  
+  mom <- metric_latest %>% 
+    mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL) %>% 
+    bind_rows(metric_cur %>% mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL)) %>% 
+    arrange(YEAR, MONTH) %>% 
+    mutate(YEAR = NULL) %>% 
+    {if (level == "state") {
+      group_by(., STATE.NAME)
+    } else if (level == "dl") {
+      group_by(., DL.NAME)
+    }} %>% 
+    pivot_wider(names_from = "MONTH", values_from = "CONCERN.HIGH") %>% 
+    magrittr::set_colnames(new_colnames) %>% 
+    dplyr::summarise(MoM = round(100*(CUR - OLD)/OLD, 4)) # also ungroups
+
+  return(mom)
+  
+}
 

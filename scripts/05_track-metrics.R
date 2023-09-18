@@ -179,13 +179,9 @@ ggsave(plot3,
 
 # metric 1: percentage high concern districts
 
-# in country, how many high concern
+# in country/each state/each dark cluster, how many high concern
 metric1_nat_cur <- get_concern_summary(concern_coarse, "nat", CONCERN.COARSE)
-
-# in each state, how many high concern
 metric1_state_cur <- get_concern_summary(concern_coarse, "state", CONCERN.COARSE)
-
-# in each dark cluster, how many high concern
 metric1_dl_cur <- get_concern_summary(concern_coarse, "dl", CONCERN.COARSE)
 
 # each time updating new classifications to old ones
@@ -289,54 +285,21 @@ if (!file.exists("outputs/metric1_full.xlsx") &
                         "States" = metric1_state_upd,
                         "Dark clusters" = metric1_dl_upd),
                path = "outputs/metric1_full.xlsx")
-    
-    
+
     
     # MoM change (only current month in focus)
     # retain only High Concern
-    mom_nat <- metric1_nat_latest %>% 
-      mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL) %>% 
-      bind_rows(metric1_nat_cur %>% 
-                  mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL)) %>% 
-      arrange(YEAR, MONTH) %>% 
-      mutate(YEAR = NULL) %>% 
-      pivot_wider(names_from = "MONTH", values_from = "CONCERN.HIGH") %>% 
-      magrittr::set_colnames(c("OLD", "CUR")) %>% 
-      dplyr::summarise(MoM = round(100*(CUR - OLD)/OLD, 4))
-    
-    mom_state <- metric1_state_latest %>% 
-      mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL) %>% 
-      bind_rows(metric1_state_cur %>% 
-                  mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL)) %>% 
-      arrange(YEAR, MONTH) %>% 
-      mutate(YEAR = NULL) %>% 
-      group_by(STATE.NAME) %>% 
-      pivot_wider(names_from = "MONTH", values_from = "CONCERN.HIGH") %>% 
-      magrittr::set_colnames(c("STATE.NAME", "STATE.CODE", "OLD", "CUR")) %>% 
-      dplyr::summarise(MoM = round(100*(CUR - OLD)/OLD, 4))
-    
-    mom_dl <- metric1_dl_latest %>% 
-      mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL) %>% 
-      bind_rows(metric1_dl_cur %>% 
-                  mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL)) %>% 
-      arrange(YEAR, MONTH) %>% 
-      mutate(YEAR = NULL) %>% 
-      group_by(DL.NAME) %>% 
-      pivot_wider(names_from = "MONTH", values_from = "CONCERN.HIGH") %>% 
-      magrittr::set_colnames(c("DL.NAME", "OLD", "CUR")) %>% 
-      dplyr::summarise(MoM = round(100*(CUR - OLD)/OLD, 4))
-    
-    
+
     metric1_nat_track <- metric1_nat_cur %>% 
-      bind_cols(mom_nat) %>% 
+      bind_cols(calc_mom("nat")) %>% 
       dplyr::select(-YEAR, -MONTH, -CONCERN.LOW, -CONCERN.MID)
     
     metric1_state_track <- metric1_state_cur %>% 
-      left_join(mom_state) %>% 
+      left_join(calc_mom("state")) %>% 
       dplyr::select(-YEAR, -MONTH, -CONCERN.LOW, -CONCERN.MID)
     
     metric1_dl_track <- metric1_dl_cur %>% 
-      left_join(mom_dl) %>% 
+      left_join(calc_mom("dl")) %>% 
       dplyr::select(-YEAR, -MONTH, -CONCERN.LOW, -CONCERN.MID)
     
     

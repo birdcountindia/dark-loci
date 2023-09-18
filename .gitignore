@@ -2,14 +2,10 @@
 .Rhistory
 .Ruserdata
 
-*.RData
 *.Rproj
 
-# RMD caches
-*_cache/
-*_files/
-
 # data files
+*.RData
 *.txt
 *.zip
 *.pdf
