@@ -8,8 +8,8 @@ require(sf)
 # - spatial data (pre-processed) as "maps.RData" file
 ###   ###
 
-source("https://raw.githubusercontent.com/birdcountindia/bci-functions/main/summaries.R")
-source("https://raw.githubusercontent.com/birdcountindia/bci-functions/main/mapping.R")
+source("https://raw.githubusercontent.com/birdcountindia/bci-functions/main/01_functions/summaries.R")
+source("https://raw.githubusercontent.com/birdcountindia/bci-functions/main/01_functions/mapping.R")
 
 # region codes to link state/district names with their codes
 load(url("https://github.com/birdcountindia/ebird-datasets/raw/main/region_codes.RData"))
@@ -18,19 +18,21 @@ load(url("https://github.com/birdcountindia/ebird-datasets/raw/main/region_codes
 
 
 # date under consideration for current leaderboard
-cur_date <- if (today() %>% day() < 16) { 
-  (today() - months(1)) %>% floor_date(unit = "month")
-} else {
-  today() %>% floor_date(unit = "month")
-}
-
-rel_date <- if (today() %>% day() < 16) {
-  ((today() - months(1)) - months(1)) %>%
-    floor_date(unit = "month")
-} else {
-  (today() - months(1)) %>%
-    floor_date(unit = "month")
-}
+# cur_date <- if (today() %>% day() < 16) { 
+#   (today() - months(1)) %>% floor_date(unit = "month")
+# } else {
+#   today() %>% floor_date(unit = "month")
+# }
+# 
+# rel_date <- if (today() %>% day() < 16) {
+#   ((today() - months(1)) - months(1)) %>%
+#     floor_date(unit = "month")
+# } else {
+#   (today() - months(1)) %>%
+#     floor_date(unit = "month")
+# }
+cur_date <- "2023-03-01" %>% as_date()
+rel_date <- "2023-02-01" %>% as_date()
 
 cur_year <- cur_date %>% year()
 cur_month_num <- cur_date %>% month()
