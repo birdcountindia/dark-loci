@@ -7,6 +7,8 @@ library(patchwork)
 library(writexl)
 library(readxl)
 
+source("scripts/functions.R")
+
 load("../india-maps/outputs/maps_sf.RData")
 # load(url("https://github.com/birdcountindia/india-maps/raw/main/outputs/maps_sf.RData"))
 sf_use_s2(FALSE)

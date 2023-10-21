@@ -39,7 +39,7 @@ get_concern_summary <- function(concern_data, scale, concern_col) {
       }
       } %>%
       ungroup() %>% 
-      pivot_wider(names_from = concern_col_str, values_from = "PROP.DIST") %>%
+      pivot_wider(names_from = all_of(concern_col_str), values_from = "PROP.DIST") %>%
       magrittr::set_colnames(new_colnames) %>%
       mutate(across(everything(), ~ replace_na(.x, 0))) %>%
       {if (str_detect(concern_col_str, "COARSE")) {
@@ -79,7 +79,7 @@ get_concern_summary <- function(concern_data, scale, concern_col) {
       }
       } %>%
       ungroup() %>% 
-      pivot_wider(names_from = concern_col_str, values_from = "PROP.DIST") %>%
+      pivot_wider(names_from = all_of(concern_col_str), values_from = "PROP.DIST") %>%
       magrittr::set_colnames(c("STATE.NAME", new_colnames)) %>% ###
       mutate(across(contains("CONCERN."), ~ replace_na(.x, 0))) %>% ###
       {if (str_detect(concern_col_str, "COARSE")) {
@@ -126,7 +126,7 @@ get_concern_summary <- function(concern_data, scale, concern_col) {
       }
       }  %>%
       ungroup() %>%
-      pivot_wider(names_from = concern_col_str, values_from = "PROP.DIST") %>%
+      pivot_wider(names_from = all_of(concern_col_str), values_from = "PROP.DIST") %>%
       magrittr::set_colnames(c("DL.NAME", new_colnames)) %>% ###
       mutate(across(contains("CONCERN."), ~ replace_na(.x, 0))) %>%
       {if (str_detect(concern_col_str, "COARSE")) {
@@ -174,20 +174,40 @@ calc_mom <- function(level) {
     return("level should be one of {nat, state, dl}")
   }
 
-  
-  mom <- metric_latest %>% 
-    mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL) %>% 
-    bind_rows(metric_cur %>% mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL)) %>% 
-    arrange(YEAR, MONTH) %>% 
-    mutate(YEAR = NULL) %>% 
-    {if (level == "state") {
-      group_by(., STATE.NAME)
-    } else if (level == "dl") {
-      group_by(., DL.NAME)
-    }} %>% 
-    pivot_wider(names_from = "MONTH", values_from = "CONCERN.HIGH") %>% 
-    magrittr::set_colnames(new_colnames) %>% 
-    dplyr::summarise(MoM = round(100*(CUR - OLD)/OLD, 4)) # also ungroups
+  # no MoM if first record
+  if (nrow(metric_latest) == 0) {
+    
+    print("Current year-month is first record, so skipping MoM calculation and returning NA.")
+    
+    mom <- metric_cur %>% 
+      {if (level == "state") {
+        group_by(., STATE.NAME)
+      } else if (level == "dl") {
+        group_by(., DL.NAME)
+      } else {
+        .
+      }} %>% 
+      reframe(MoM = NA_real_)
+    
+  } else {
+    
+    mom <- metric_latest %>% 
+      mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL) %>% 
+      bind_rows(metric_cur %>% mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL)) %>% 
+      arrange(YEAR, MONTH) %>% 
+      mutate(YEAR = NULL) %>% 
+      {if (level == "state") {
+        group_by(., STATE.NAME)
+      } else if (level == "dl") {
+        group_by(., DL.NAME)
+      } else {
+        .
+      }} %>% 
+      pivot_wider(names_from = "MONTH", values_from = "CONCERN.HIGH") %>% 
+      magrittr::set_colnames(new_colnames) %>% 
+      dplyr::summarise(MoM = round(100*(CUR - OLD)/OLD, 4)) # also ungroups
+    
+  }
 
   return(mom)
   
