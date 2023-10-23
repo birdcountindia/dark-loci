@@ -31,7 +31,7 @@ if (!file.exists(thresh_path)) {
     
   } else {     
     
-    temp0 <- data2 %>% 
+    temp0 <- data_invcomp %>% 
       # join district geom then state names
       left_join(dists_sf %>% dplyr::select(-STATE.NAME, -AREA)) %>% 
       st_as_sf() %>% 

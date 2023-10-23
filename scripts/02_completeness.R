@@ -52,7 +52,7 @@ ecoregions <- ecoregions %>%
 # calculating S.EXP for each ecoregion, then INV.COMP per district, according to which 1-2
 # ecoregions it comes under
 tictoc::tic("Spatial joins of districts and ecoregions to main data")
-data1 <- data0 %>% 
+data_ecoreg_sf <- data_spat %>% 
   st_as_sf(coords = c("LONGITUDE", "LATITUDE")) %>% 
   st_set_crs(st_crs(ecoregions)) %>% 
   # joining ecoregion data
@@ -67,7 +67,7 @@ eco_dist_link <- ecoregions %>%
 
 temp1 <- data %>% 
   # joining ecoregion information
-  left_join(data1 %>% 
+  left_join(data_ecoreg_sf %>% 
               st_drop_geometry() %>% 
               dplyr::select(SAMPLING.EVENT.IDENTIFIER, ECOREGION, DISTRICT.NAME)) %>% 
   # how many lists species reported from
@@ -84,7 +84,7 @@ temp1 <- data %>%
   
 ecoregion_exp <- data %>% 
   # joining ecoregion information
-  left_join(data1 %>% 
+  left_join(data_ecoreg_sf %>% 
               st_drop_geometry() %>% 
               dplyr::select(SAMPLING.EVENT.IDENTIFIER, ECOREGION, DISTRICT.NAME)) %>% 
   filter(!is.na(ECOREGION)) %>% 
@@ -104,7 +104,7 @@ ecoregion_exp <- data %>%
 
 temp2 <- data %>% 
   # joining ecoregion information
-  left_join(data1 %>% 
+  left_join(data_ecoreg_sf %>% 
               st_drop_geometry() %>% 
               dplyr::select(SAMPLING.EVENT.IDENTIFIER, ECOREGION, DISTRICT.NAME)) %>% 
   # how many lists species reported from
@@ -123,7 +123,7 @@ temp2 <- data %>%
 
 district_exp <- data %>% 
   # joining ecoregion information
-  left_join(data1 %>% 
+  left_join(data_ecoreg_sf %>% 
               st_drop_geometry() %>% 
               dplyr::select(SAMPLING.EVENT.IDENTIFIER, ECOREGION, DISTRICT.NAME)) %>% 
   filter(!is.na(DISTRICT.NAME)) %>% 
@@ -143,14 +143,14 @@ district_exp <- data %>%
 
 # calculating inventory completeness --------------------------------------
 
-data2 <- district_exp %>% 
+data_invcomp <- district_exp %>% 
   # calculating C
   mutate(INV.C = calc_inv_comp(S.EXP, S.OBS.DIST) %>% round(2))
   
   
 # writing -----------------------------------------------------------------
 
-save(data2, district_exp, ecoregion_exp, eco_dist_link, data1,
-     ecoregions, reclass, 
-     file = "data/02_completeness.RData")
+save(data_invcomp, 
+     # district_exp, ecoregion_exp, eco_dist_link, data_ecoreg_sf, ecoregions, reclass, 
+     file = get_stage_obj_path("data", "completeness", add_rel_str = TRUE))
 
