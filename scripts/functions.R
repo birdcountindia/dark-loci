@@ -35,8 +35,8 @@ get_stage_obj_path <- function(folder, stage, filetype = NULL, add_rel_str = FAL
   
   stage_translation <- if (stage == "params") {
     "00_params"
-  } else if (stage %in% c("import", "data-import")) {
-    "01_data-import"
+  } else if (stage %in% c("spatialise", "data-spatialise")) {
+    "01_data-spatialise"
   } else if (stage %in% c("comp", "completeness")) {
     "02_completeness"
   } else if (stage %in% c("thresh", "thresholds")) {

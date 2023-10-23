@@ -30,31 +30,31 @@ source("scripts/00_params.R")
 
 # main data
 load(maindatapath)
+data <- data_filt
 
 
-# importing data ----------------------------------------------------------
+# spatialising data (add mapvars) ------------------------------------------------------
 
-# output is data0 object
+# output is data_spat object
 
-tictoc::tic("Data import completed")
-
-source("scripts/01_data-import.R")
-
+tictoc::tic("Data spatialisation completed")
+source("scripts/01_data-spatialise.R")
 tictoc::toc() # 18 mins
 
 
 # # if already run above previously, just unhash and run 2 lines below
-# load(get_stage_obj_path("data", "import", add_rel_str = TRUE))
+# load("data/01_data-spatialise.RData")
 
 
 # identifying Dark ------------------------------------------------------------------
 
 ### district-wise completeness
 
-# need EBD data (maindatapath) and output of 01_data-import
+# need EBD data (maindatapath) and output of 01_data-spatialise
+# output is data object with invcomp calculated
 tictoc::tic("Districtwise completeness analysis finished")
 source("scripts/02_completeness.R")
-# load("data/02_completeness.RData")
+# load(get_stage_obj_path("data", "completeness", add_rel_str = TRUE))
 tictoc::toc() # 180 secs
 
 ### setting thresholds and classifying into concern categories

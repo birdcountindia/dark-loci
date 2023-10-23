@@ -1,3 +1,5 @@
+# just adding our map vars to the sliced data object (which can be joined to main data)
+
 require(lubridate)
 require(tidyverse)
 require(glue)
@@ -15,11 +17,13 @@ source("https://raw.githubusercontent.com/birdcountindia/bci-functions/main/01_f
 # joining mapvars --------------------------------------------------------
 
 load(slicedatapath)
+data_slice_G <- data_slice_G_filt
 
 tictoc::tic("Joining mapvars to each unique list")
 sf_use_s2(FALSE)
-data0 <- join_map_sf(data_slice_G)
+data_spat <- join_map_sf(data_slice_G)
 tictoc::toc()
 
 # saving object at each (monthly) iteration because time-consuming step
-save(data0, file = get_stage_obj_path("data", "import", add_rel_str = TRUE))
+# but overwriting, because no need to have separate monthly checklist-map mappings
+save(data_spat, file = "data/01_data-spatialise.RData")
