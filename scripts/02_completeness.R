@@ -38,17 +38,24 @@ data_ecoreg_sf <- data_spat %>%
   st_join(ecoregions)
 tictoc::toc() # 28 sec
 
-# linking districts to ecoregions
-eco_dist_link <- ecoregions %>% 
-  st_join(dists_sf) %>% 
-  st_drop_geometry() %>% 
-  distinct(DISTRICT.NAME, ECOREGION)
-
-temp1 <- data %>% 
+data_ecoreg <- data %>% 
   # joining ecoregion information
   left_join(data_ecoreg_sf %>% 
               st_drop_geometry() %>% 
-              dplyr::select(SAMPLING.EVENT.IDENTIFIER, ECOREGION, DISTRICT.NAME)) %>% 
+              dplyr::select(SAMPLING.EVENT.IDENTIFIER, ECOREGION),
+            by = "SAMPLING.EVENT.IDENTIFIER")
+
+
+# linking districts to ecoregions
+# our primary analysis focus is on districts in EBD, so avoiding using names from dists_sf
+eco_dist_link <- data_ecoreg %>% 
+  distinct(STATE.CODE, STATE, COUNTY.CODE, COUNTY, ECOREGION) %>% 
+  filter(!is.na(COUNTY) & !is.na(COUNTY.CODE))
+
+
+# 1. S.EXP for each ecoregion
+
+temp1 <- data_ecoreg %>% 
   # how many lists species reported from
   group_by(ECOREGION, COMMON.NAME) %>% 
   mutate(SPEC.LISTS = n_distinct(SAMPLING.EVENT.IDENTIFIER)) %>% 
@@ -61,11 +68,7 @@ temp1 <- data %>%
   mutate(Q1.ECO = replace_na(Q1, 0),
          Q2.ECO = replace_na(Q2, 0))
   
-ecoregion_exp <- data %>% 
-  # joining ecoregion information
-  left_join(data_ecoreg_sf %>% 
-              st_drop_geometry() %>% 
-              dplyr::select(SAMPLING.EVENT.IDENTIFIER, ECOREGION, DISTRICT.NAME)) %>% 
+ecoregion_exp <- data_ecoreg %>% 
   filter(!is.na(ECOREGION)) %>% 
   # number of lists (N) and species (s_obs) from ecoregion 
   group_by(ECOREGION) %>% 
@@ -77,22 +80,21 @@ ecoregion_exp <- data %>%
   # linking ecoregions with districts, to average S.EXP.ECO across multiple
   # ecoregions per district
   right_join(eco_dist_link) %>% 
-  group_by(DISTRICT.NAME) %>% 
-  summarise(S.EXP.ECO = floor(mean(S.EXP.ECO)))
+  group_by(STATE.CODE, STATE, COUNTY.CODE, COUNTY) %>% 
+  summarise(S.EXP.ECO = floor(mean(S.EXP.ECO))) %>% 
+  ungroup()
 
 
-temp2 <- data %>% 
-  # joining ecoregion information
-  left_join(data_ecoreg_sf %>% 
-              st_drop_geometry() %>% 
-              dplyr::select(SAMPLING.EVENT.IDENTIFIER, ECOREGION, DISTRICT.NAME)) %>% 
+# 2. INV.COMP per district
+
+temp2 <- data_ecoreg %>% 
   # how many lists species reported from
-  group_by(DISTRICT.NAME, COMMON.NAME) %>% 
+  group_by(STATE.CODE, STATE, COUNTY.CODE, COUNTY, COMMON.NAME) %>% 
   mutate(SPEC.LISTS = n_distinct(SAMPLING.EVENT.IDENTIFIER)) %>% 
   filter(SPEC.LISTS %in% 1:2) %>% 
   # how many species of Q1 and Q2
   mutate(Q = ifelse(SPEC.LISTS == 1, "Q1", "Q2")) %>% 
-  group_by(DISTRICT.NAME, Q) %>% 
+  group_by(STATE.CODE, STATE, COUNTY.CODE, COUNTY, Q) %>% 
   summarise(Qn = n_distinct(COMMON.NAME)) %>% 
   pivot_wider(names_from = "Q", values_from = "Qn") %>% 
   mutate(Q1 = replace_na(Q1, 0),
@@ -100,19 +102,17 @@ temp2 <- data %>%
   rename(Q1.DIST = Q1,
          Q2.DIST = Q2)
 
-district_exp <- data %>% 
-  # joining ecoregion information
-  left_join(data_ecoreg_sf %>% 
-              st_drop_geometry() %>% 
-              dplyr::select(SAMPLING.EVENT.IDENTIFIER, ECOREGION, DISTRICT.NAME)) %>% 
-  filter(!is.na(DISTRICT.NAME)) %>% 
+district_exp <- data_ecoreg %>% 
+  filter(!is.na(COUNTY.CODE)) %>% 
   # number of lists (N) and species (s_obs) from district 
-  group_by(DISTRICT.NAME) %>% 
+  group_by(STATE.CODE, STATE, COUNTY.CODE, COUNTY) %>% 
   summarise(N.DIST = n_distinct(SAMPLING.EVENT.IDENTIFIER),
             S.OBS.DIST = n_distinct(COMMON.NAME)) %>% 
+  ungroup() %>% 
   left_join(temp2) %>% 
   # calculating S.EXP for district based on existing lists from district
-  mutate(S.EXP.DIST = calc_exp_spec(S.OBS.DIST, N.DIST, Q1.DIST, Q2.DIST) %>% floor()) %>% 
+  mutate(S.EXP.DIST = calc_exp_spec(S.OBS.DIST, N.DIST, Q1.DIST, Q2.DIST) %>% 
+           floor()) %>% 
   # this brings in districts with no lists
   full_join(ecoregion_exp) %>% 
   replace_na(list(N.DIST = 0, S.OBS.DIST = 0, S.EXP.DIST = 0)) %>% 
@@ -124,7 +124,8 @@ district_exp <- data %>%
 
 data_invcomp <- district_exp %>% 
   # calculating C
-  mutate(INV.C = calc_inv_comp(S.EXP, S.OBS.DIST) %>% round(2))
+  mutate(INV.C = calc_inv_comp(S.EXP, S.OBS.DIST) %>% 
+           round(2))
   
   
 # writing -----------------------------------------------------------------
