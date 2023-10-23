@@ -28,21 +28,30 @@ state_dists <- dists_sf %>%
 source("scripts/00_params.R")
 
 
+# main data
+load(maindatapath)
+
+
 # importing data ----------------------------------------------------------
+
+# output is data0 object
 
 tictoc::tic("Data import completed")
 
 source("scripts/01_data-import.R")
-# # if already run above previously, just unhash and run below
-# load("ebd_IN_relNov-2022.RData") # tweak maindatapath
-# load("data/data0.RData")
 
 tictoc::toc() # 18 mins
+
+
+# # if already run above previously, just unhash and run 2 lines below
+# load(get_stage_obj_path("data", "import", add_rel_str = TRUE))
 
 
 # identifying Dark ------------------------------------------------------------------
 
 ### district-wise completeness
+
+# need EBD data (maindatapath) and output of 01_data-import
 tictoc::tic("Districtwise completeness analysis finished")
 source("scripts/02_completeness.R")
 # load("data/02_completeness.RData")

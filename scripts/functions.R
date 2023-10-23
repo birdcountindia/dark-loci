@@ -1,4 +1,64 @@
 
+# get rel-YYYY string -----------------------------------------------------
+
+get_rel_str <- function() {
+  
+  # params must be loaded in environment
+  
+  glue("rel{rel_month_lab}-{rel_year}")
+  
+}
+
+# get path strings for locations in repo ----------------------------------------
+
+# we need to keep referring to different objects (data, outputs, scripts)
+# of different stages in the analyses, so this function makes it easier
+# to reference the appropriate paths
+
+get_stage_obj_path <- function(folder, stage, filetype = NULL, add_rel_str = FALSE) {
+
+  if (!folder %in% c("data", "outputs", "scripts")) {
+    
+    return("Incorrect folder specification.")
+    
+  } else if (is.null(filetype)) {
+    
+    if (folder == "data") {
+      filetype <- ".RData"
+    } else if (folder == "outputs") {
+      filetype <- ".xlsx"
+    } else if (folder == "scripts") {
+      filetype <- ".R"
+    } 
+    
+  } 
+  
+  stage_translation <- if (stage == "params") {
+    "00_params"
+  } else if (stage %in% c("import", "data-import")) {
+    "01_data-import"
+  } else if (stage %in% c("comp", "completeness")) {
+    "02_completeness"
+  } else if (stage %in% c("thresh", "thresholds")) {
+    "03_thresholds"
+  } else if (stage %in% c("id", "id-loci")) {
+    "04_id-loci"
+  } else if (stage %in% c("track", "track-metrics")) {
+    "05_track-metrics"
+  } else {
+    return("Incorrect stage specification.")
+  }
+  
+  # adding rel-YYYY string if needed
+  if (add_rel_str == TRUE) {
+    stage_translation <- glue("{stage_translation}_{get_rel_str()}")
+  }
+  
+  return(glue("{folder}/{stage_translation}{filetype}"))
+  
+}
+
+
 # how many of each concern category -------------------------------------------------
 
 get_concern_summary <- function(concern_data, scale, concern_col) {
