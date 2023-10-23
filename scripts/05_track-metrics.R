@@ -1,5 +1,3 @@
-require(patchwork)
-
 track_start <- "2023-03-01" %>% as_date()
 track_end <- "2024-02-01" %>% as_date()
 

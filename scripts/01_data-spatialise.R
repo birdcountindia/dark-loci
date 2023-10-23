@@ -1,14 +1,10 @@
 # just adding our map vars to the sliced data object (which can be joined to main data)
 
-require(lubridate)
-require(tidyverse)
-require(glue)
-require(sf)
-
 ### required files in directory: ###
 # - latest EBD release .RData file
 # - spatial data (pre-processed) as "maps.RData" file
 ###   ###
+
 
 source("https://raw.githubusercontent.com/birdcountindia/bci-functions/main/01_functions/summaries.R")
 source("https://raw.githubusercontent.com/birdcountindia/bci-functions/main/01_functions/mapping.R")

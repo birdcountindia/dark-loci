@@ -205,6 +205,27 @@ get_concern_summary <- function(concern_data, scale, concern_col) {
 }
 
 
+# functions for calculating inventory completeness ----------------------------------
+
+calc_exp_spec <- function(s_obs, N, q1, q2) {
+  
+  s_exp <- s_obs + ( ((N - 1)/N) * ((q1*(q1 - 1)) / (2*(q2 + 1))) )
+  
+  return(s_exp)
+  
+}
+
+calc_inv_comp <- function(s_exp, s_obs) {
+  
+  # for districts like Nicobars, district has more species than ecoregion
+  # so completeness > 1
+  C <- ifelse(s_obs > s_exp, 1, s_obs/s_exp)
+  
+  return(C)
+  
+}
+
+
 # calculate MoM change --------------------------------------------------------------
 
 calc_mom <- function(level) {

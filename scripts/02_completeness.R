@@ -1,26 +1,5 @@
-
-# Following Peterson (2018) 
-
-require(tidyverse)
-
-
-calc_exp_spec <- function(s_obs, N, q1, q2) {
-  
-  s_exp <- s_obs + ( ((N - 1)/N) * ((q1*(q1 - 1)) / (2*(q2 + 1))) )
-  
-  return(s_exp)
-  
-}
-
-calc_inv_comp <- function(s_exp, s_obs) {
-  
-  # for districts like Nicobars, district has more species than ecoregion
-  # so completeness > 1
-  C <- ifelse(s_obs > s_exp, 1, s_obs/s_exp)
-  
-  return(C)
-  
-}
+# Following AT Peterson et al (2018), Digital Accessible Knowledge 
+# of the birds of India: characterizing gaps in time and space
 
 
 # importing ecoregions data ---------------------------------------------------
