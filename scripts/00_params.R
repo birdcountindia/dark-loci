@@ -5,19 +5,22 @@ require(glue)
 # automated parameters ----------------------------------------------------
 
 # date under consideration for current leaderboard
-cur_date <- if (today() %>% day() < 16) { 
-  (today() - months(1)) %>% floor_date(unit = "month")
-} else {
-  today() %>% floor_date(unit = "month")
-}
+# cur_date <- if (today() %>% day() < 16) { 
+#   (today() - months(1)) %>% floor_date(unit = "month")
+# } else {
+#   today() %>% floor_date(unit = "month")
+# }
+# 
+# rel_date <- if (today() %>% day() < 16) {
+#   ((today() - months(1)) - months(1)) %>%
+#     floor_date(unit = "month")
+# } else {
+#   (today() - months(1)) %>%
+#     floor_date(unit = "month")
+# }
+cur_date <- "2023-05-01" %>% as_date()
+rel_date <- "2023-04-01" %>% as_date()
 
-rel_date <- if (today() %>% day() < 16) {
-  ((today() - months(1)) - months(1)) %>%
-    floor_date(unit = "month")
-} else {
-  (today() - months(1)) %>%
-    floor_date(unit = "month")
-}
 
 cur_year <- cur_date %>% year()
 cur_month_num <- cur_date %>% month()
@@ -32,3 +35,6 @@ maindatapath <-  glue("../ebird-datasets/EBD/ebd_IN_rel{rel_month_lab}-{rel_year
 slicedatapath <-  glue("../ebird-datasets/EBD/ebd_IN_rel{rel_month_lab}-{rel_year}_slice.RData")
 # maindatapath <-  "../ebird-datasets/EBD/ebd_IN_relNov-2022.RData"
 # slicedatapath <-  "../ebird-datasets/EBD/ebd_IN_relNov-2022_slice.RData"
+# # test data
+# maindatapath <-  glue("ebd_IN_rel{rel_month_lab}-{rel_year}.RData")
+# slicedatapath <-  glue("ebd_IN_rel{rel_month_lab}-{rel_year}_slice.RData")

@@ -1,4 +1,64 @@
 
+# get rel-YYYY string -----------------------------------------------------
+
+get_rel_str <- function() {
+  
+  # params must be loaded in environment
+  
+  glue("rel{rel_month_lab}-{rel_year}")
+  
+}
+
+# get path strings for locations in repo ----------------------------------------
+
+# we need to keep referring to different objects (data, outputs, scripts)
+# of different stages in the analyses, so this function makes it easier
+# to reference the appropriate paths
+
+get_stage_obj_path <- function(folder, stage, filetype = NULL, add_rel_str = FALSE) {
+
+  if (!folder %in% c("data", "outputs", "scripts")) {
+    
+    return("Incorrect folder specification.")
+    
+  } else if (is.null(filetype)) {
+    
+    if (folder == "data") {
+      filetype <- ".RData"
+    } else if (folder == "outputs") {
+      filetype <- ".xlsx"
+    } else if (folder == "scripts") {
+      filetype <- ".R"
+    } 
+    
+  } 
+  
+  stage_translation <- if (stage == "params") {
+    "00_params"
+  } else if (stage %in% c("import", "data-import")) {
+    "01_data-import"
+  } else if (stage %in% c("comp", "completeness")) {
+    "02_completeness"
+  } else if (stage %in% c("thresh", "thresholds")) {
+    "03_thresholds"
+  } else if (stage %in% c("id", "id-loci")) {
+    "04_id-loci"
+  } else if (stage %in% c("track", "track-metrics")) {
+    "05_track-metrics"
+  } else {
+    return("Incorrect stage specification.")
+  }
+  
+  # adding rel-YYYY string if needed
+  if (add_rel_str == TRUE) {
+    stage_translation <- glue("{stage_translation}_{get_rel_str()}")
+  }
+  
+  return(glue("{folder}/{stage_translation}{filetype}"))
+  
+}
+
+
 # how many of each concern category -------------------------------------------------
 
 get_concern_summary <- function(concern_data, scale, concern_col) {
@@ -39,7 +99,7 @@ get_concern_summary <- function(concern_data, scale, concern_col) {
       }
       } %>%
       ungroup() %>% 
-      pivot_wider(names_from = concern_col_str, values_from = "PROP.DIST") %>%
+      pivot_wider(names_from = all_of(concern_col_str), values_from = "PROP.DIST") %>%
       magrittr::set_colnames(new_colnames) %>%
       mutate(across(everything(), ~ replace_na(.x, 0))) %>%
       {if (str_detect(concern_col_str, "COARSE")) {
@@ -79,7 +139,7 @@ get_concern_summary <- function(concern_data, scale, concern_col) {
       }
       } %>%
       ungroup() %>% 
-      pivot_wider(names_from = concern_col_str, values_from = "PROP.DIST") %>%
+      pivot_wider(names_from = all_of(concern_col_str), values_from = "PROP.DIST") %>%
       magrittr::set_colnames(c("STATE.NAME", new_colnames)) %>% ###
       mutate(across(contains("CONCERN."), ~ replace_na(.x, 0))) %>% ###
       {if (str_detect(concern_col_str, "COARSE")) {
@@ -126,7 +186,7 @@ get_concern_summary <- function(concern_data, scale, concern_col) {
       }
       }  %>%
       ungroup() %>%
-      pivot_wider(names_from = concern_col_str, values_from = "PROP.DIST") %>%
+      pivot_wider(names_from = all_of(concern_col_str), values_from = "PROP.DIST") %>%
       magrittr::set_colnames(c("DL.NAME", new_colnames)) %>% ###
       mutate(across(contains("CONCERN."), ~ replace_na(.x, 0))) %>%
       {if (str_detect(concern_col_str, "COARSE")) {
@@ -174,20 +234,40 @@ calc_mom <- function(level) {
     return("level should be one of {nat, state, dl}")
   }
 
-  
-  mom <- metric_latest %>% 
-    mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL) %>% 
-    bind_rows(metric_cur %>% mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL)) %>% 
-    arrange(YEAR, MONTH) %>% 
-    mutate(YEAR = NULL) %>% 
-    {if (level == "state") {
-      group_by(., STATE.NAME)
-    } else if (level == "dl") {
-      group_by(., DL.NAME)
-    }} %>% 
-    pivot_wider(names_from = "MONTH", values_from = "CONCERN.HIGH") %>% 
-    magrittr::set_colnames(new_colnames) %>% 
-    dplyr::summarise(MoM = round(100*(CUR - OLD)/OLD, 4)) # also ungroups
+  # no MoM if first record
+  if (nrow(metric_latest) == 0) {
+    
+    print("Current year-month is first record, so skipping MoM calculation and returning NA.")
+    
+    mom <- metric_cur %>% 
+      {if (level == "state") {
+        group_by(., STATE.NAME)
+      } else if (level == "dl") {
+        group_by(., DL.NAME)
+      } else {
+        .
+      }} %>% 
+      reframe(MoM = NA_real_)
+    
+  } else {
+    
+    mom <- metric_latest %>% 
+      mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL) %>% 
+      bind_rows(metric_cur %>% mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL)) %>% 
+      arrange(YEAR, MONTH) %>% 
+      mutate(YEAR = NULL) %>% 
+      {if (level == "state") {
+        group_by(., STATE.NAME)
+      } else if (level == "dl") {
+        group_by(., DL.NAME)
+      } else {
+        .
+      }} %>% 
+      pivot_wider(names_from = "MONTH", values_from = "CONCERN.HIGH") %>% 
+      magrittr::set_colnames(new_colnames) %>% 
+      dplyr::summarise(MoM = round(100*(CUR - OLD)/OLD, 4)) # also ungroups
+    
+  }
 
   return(mom)
   

@@ -8,14 +8,12 @@ require(sf)
 # - spatial data (pre-processed) as "maps.RData" file
 ###   ###
 
-source("https://raw.githubusercontent.com/birdcountindia/bci-functions/main/summaries.R")
-source("https://raw.githubusercontent.com/birdcountindia/bci-functions/main/mapping.R")
+source("https://raw.githubusercontent.com/birdcountindia/bci-functions/main/01_functions/summaries.R")
+source("https://raw.githubusercontent.com/birdcountindia/bci-functions/main/01_functions/mapping.R")
 
 
 # joining mapvars --------------------------------------------------------
 
-# maps
-load(maindatapath)
 load(slicedatapath)
 
 tictoc::tic("Joining mapvars to each unique list")
@@ -23,4 +21,5 @@ sf_use_s2(FALSE)
 data0 <- join_map_sf(data_slice_G)
 tictoc::toc()
 
-save(data0, file = "data/data0.RData")
+# saving object at each (monthly) iteration because time-consuming step
+save(data0, file = get_stage_obj_path("data", "import", add_rel_str = TRUE))

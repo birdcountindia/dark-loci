@@ -131,12 +131,17 @@ if (!file.exists(class_path)) {
   
 } else {
   
-  concern_class_latest <- read_xlsx(class_path) %>% slice_tail()
+  # need latest (month before current) classification for each district in the country
+  concern_class_latest <- read_xlsx(class_path) %>% 
+    group_by(pick(c(everything(), -MONTH))) %>% 
+    arrange(MONTH) %>% 
+    slice_tail()
   
   # if running the script more than once in any particular month, don't want to reappend to database
   # but we still need the objects in the environment
   
-  avoid_reappend <- (concern_class_latest$YEAR == cur_year & concern_class_latest$MONTH == cur_month_num)
+  avoid_reappend <- (unique(concern_class_latest$YEAR) == cur_year & 
+                       unique(concern_class_latest$MONTH) == cur_month_num)
 
     concern_class_upd <- read_xlsx(class_path) %>% 
       {if (avoid_reappend) {
