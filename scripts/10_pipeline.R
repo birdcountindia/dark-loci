@@ -6,6 +6,7 @@ library(magrittr)
 library(patchwork)
 library(writexl)
 library(readxl)
+library(skimmr) # devtools::install_github("rikudoukarthik/skimmr")
 
 source("scripts/functions.R")
 

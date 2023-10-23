@@ -5,7 +5,7 @@ get_rel_str <- function() {
   
   # params must be loaded in environment
   
-  glue("rel{rel_month_lab}-{rel_year}")
+  glue("rel{currel_month_lab}-{currel_year}")
   
 }
 
@@ -104,7 +104,7 @@ get_concern_summary <- function(concern_data, scale, concern_col) {
       mutate(across(everything(), ~ replace_na(.x, 0))) %>%
       {if (str_detect(concern_col_str, "COARSE")) {
         arrange(., desc(CONCERN.HIGH), desc(CONCERN.MID), desc(CONCERN.LOW)) %>%
-          mutate(YEAR = cur_year, MONTH = cur_month_num) %>%
+          mutate(YEAR = real_year, MONTH = real_month_num) %>%
           relocate(YEAR, MONTH, CONCERN.LOW, CONCERN.MID, CONCERN.HIGH)
       } else {
         arrange(., desc(CONCERN.5), desc(CONCERN.4), desc(CONCERN.3), desc(CONCERN.2), desc(CONCERN.1))
@@ -146,7 +146,7 @@ get_concern_summary <- function(concern_data, scale, concern_col) {
         arrange(., desc(CONCERN.HIGH), desc(CONCERN.MID), desc(CONCERN.LOW)) %>%
           # adding state codes
           left_join(region_codes %>% distinct(STATE, STATE.CODE), by = c("STATE.NAME" = "STATE")) %>% ###
-          mutate(YEAR = cur_year, MONTH = cur_month_num) %>%
+          mutate(YEAR = real_year, MONTH = real_month_num) %>%
           relocate(STATE.CODE, STATE.NAME, YEAR, MONTH, CONCERN.LOW, CONCERN.MID, CONCERN.HIGH)
       } else {
         arrange(., desc(CONCERN.5), desc(CONCERN.4), desc(CONCERN.3), desc(CONCERN.2), desc(CONCERN.1)) %>% 
@@ -191,7 +191,7 @@ get_concern_summary <- function(concern_data, scale, concern_col) {
       mutate(across(contains("CONCERN."), ~ replace_na(.x, 0))) %>%
       {if (str_detect(concern_col_str, "COARSE")) {
         arrange(., desc(CONCERN.HIGH), desc(CONCERN.MID), desc(CONCERN.LOW)) %>%
-          mutate(YEAR = cur_year, MONTH = cur_month_num) %>%
+          mutate(YEAR = real_year, MONTH = real_month_num) %>%
           relocate(DL.NAME, YEAR, MONTH, CONCERN.LOW, CONCERN.MID, CONCERN.HIGH)
       } else {
         arrange(., desc(CONCERN.5), desc(CONCERN.4), desc(CONCERN.3), desc(CONCERN.2), desc(CONCERN.1))

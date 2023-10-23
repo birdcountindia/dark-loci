@@ -37,7 +37,7 @@ status_dl <- get_concern_summary(concern_fine, "dl", CONCERN.FINE)
 write_xlsx(x = list("Country" = status_nat,
                     "States" = status_state,
                     "Dark clusters" = status_dl),
-           path = glue("outputs/status_rel-{rel_year}{rel_month_num %>% str_pad(2, pad = '0')}.xlsx"))
+           path = glue("outputs/status_rel-{currel_year}{currel_month_num %>% str_pad(2, pad = '0')}.xlsx"))
 
 
 
@@ -106,7 +106,7 @@ plot1 <- ((plot1_base +
                              name = "Concern level"))) 
 
 ggsave(plot1, 
-       filename = glue("outputs/status_rel-{rel_year}{rel_month_num %>% str_pad(2, pad = '0')}.png"),
+       filename = glue("outputs/status_rel-{currel_year}{currel_month_num %>% str_pad(2, pad = '0')}.png"),
        dpi = 300, width = 24, height = 24, units = "in")  
 
 
@@ -141,7 +141,7 @@ plot2 <- (plot2_base +
                           name = "Prop. of concern 3\ndistricts"))
 
 ggsave(plot2, 
-       filename = glue("outputs/propconcern_st_rel-{rel_year}{rel_month_num %>% str_pad(2, pad = '0')}.png"),
+       filename = glue("outputs/propconcern_st_rel-{currel_year}{currel_month_num %>% str_pad(2, pad = '0')}.png"),
        dpi = 300, width = 36, height = 14, units = "in")  
 
 
@@ -168,7 +168,7 @@ plot3 <- ((status_dl %>%
   theme(plot.title = element_text(size = 24, hjust = 0.5))
 
 ggsave(plot3, 
-       filename = glue("outputs/propconcern_dl_rel-{rel_year}{rel_month_num %>% str_pad(2, pad = '0')}.png"),
+       filename = glue("outputs/propconcern_dl_rel-{currel_year}{currel_month_num %>% str_pad(2, pad = '0')}.png"),
        dpi = 300, width = 36, height = 14, units = "in")  
 
 
@@ -234,23 +234,23 @@ if (!file.exists("outputs/metric1_full.xlsx") &
     # if running the script more than once in any particular month, don't want to reappend to database
     # but we still need the objects in the environment
     
-    avoid_reappend <- (metric1_nat_latest$YEAR == cur_year & metric1_nat_latest$MONTH == cur_month_num)
+    avoid_reappend <- (metric1_nat_latest$YEAR == real_year & metric1_nat_latest$MONTH == real_month_num)
     
     if (avoid_reappend) {
       # previous month's values (for MoM later)
       
       metric1_nat_latest <- metric1_nat_data %>% 
-        filter(!(YEAR == cur_year & MONTH == cur_month_num)) %>% 
+        filter(!(YEAR == real_year & MONTH == real_month_num)) %>% 
         slice_tail()
       
       metric1_state_latest <- metric1_state_data %>% 
-        filter(!(YEAR == cur_year & MONTH == cur_month_num)) %>% 
+        filter(!(YEAR == real_year & MONTH == real_month_num)) %>% 
         group_by(STATE.NAME) %>% 
         slice_tail() %>% 
         ungroup()
       
       metric1_dl_latest <- metric1_dl_data %>% 
-        filter(!(YEAR == cur_year & MONTH == cur_month_num)) %>% 
+        filter(!(YEAR == real_year & MONTH == real_month_num)) %>% 
         group_by(DL.NAME) %>% 
         slice_tail() %>% 
         ungroup()
@@ -259,21 +259,21 @@ if (!file.exists("outputs/metric1_full.xlsx") &
     
     metric1_nat_upd <- metric1_nat_data %>% 
       {if (avoid_reappend) {
-        filter(., !(YEAR == cur_year & MONTH == cur_month_num)) # removing repeated rows
+        filter(., !(YEAR == real_year & MONTH == real_month_num)) # removing repeated rows
       }} %>%
       bind_rows(metric1_nat_cur) %>% 
       arrange(YEAR, MONTH)
     
     metric1_state_upd <- metric1_state_data %>% 
       {if (avoid_reappend) {
-        filter(., !(YEAR == cur_year & MONTH == cur_month_num)) # removing repeated rows
+        filter(., !(YEAR == real_year & MONTH == real_month_num)) # removing repeated rows
       }} %>%
       bind_rows(metric1_state_cur) %>% 
       arrange(STATE.NAME, YEAR, MONTH)
     
     metric1_dl_upd <- metric1_dl_data %>% 
       {if (avoid_reappend) {
-        filter(., !(YEAR == cur_year & MONTH == cur_month_num)) # removing repeated rows
+        filter(., !(YEAR == real_year & MONTH == real_month_num)) # removing repeated rows
       }} %>%
       bind_rows(metric1_dl_cur) %>% 
       arrange(DL.NAME, YEAR, MONTH)

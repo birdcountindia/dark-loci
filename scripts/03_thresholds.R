@@ -45,7 +45,7 @@ if (!file.exists(thresh_path)) {
     
     # only use new thresholds if one year has passed
     
-    if (!(cur_date - thresh1_cur$DATE >= 365)) {
+    if (!(date_real - thresh1_cur$DATE >= 365)) {
 
       print("Using current threshold definitions.")
       
@@ -66,7 +66,7 @@ if (!file.exists(thresh_path)) {
         filter(ROW %in% floor(thresh_lev1)) %>% 
         pivot_wider(names_from = ROW, values_from = INV.C) %>% 
         magrittr::set_colnames(c("THRESH.FINE1", "THRESH.FINE2", "THRESH.FINE3", "THRESH.FINE4")) %>% 
-        mutate(YEAR = cur_year, MONTH = cur_month_num) %>% 
+        mutate(YEAR = real_year, MONTH = real_month_num) %>% 
         relocate(YEAR, MONTH, THRESH.FINE1, THRESH.FINE2, THRESH.FINE3, THRESH.FINE4)
       
       thresh2_cur <- temp0 %>% 
@@ -78,7 +78,7 @@ if (!file.exists(thresh_path)) {
         filter(ROW %in% floor(thresh_lev2)) %>% 
         pivot_wider(names_from = ROW, values_from = INV.C) %>% 
         magrittr::set_colnames(c("THRESH.COARSE1", "THRESH.COARSE2")) %>% 
-        mutate(YEAR = cur_year, MONTH = cur_month_num) %>% 
+        mutate(YEAR = real_year, MONTH = real_month_num) %>% 
         relocate(YEAR, MONTH, THRESH.COARSE1, THRESH.COARSE2)
       
       
@@ -113,7 +113,7 @@ concern_class_cur <- temp0 %>%
   mutate(CONCERN.COARSE = factor(CONCERN.COARSE, levels = c("LOW", "MID", "HIGH"))) %>% 
   arrange(desc(CONCERN.FINE), INV.C, desc(N.DIST), STATE.NAME, DISTRICT.NAME) %>% 
   mutate(across(contains("THRESH."), ~ as.null(.))) %>% # remove threshold columns
-  mutate(YEAR = cur_year, MONTH = cur_month_num) %>% 
+  mutate(YEAR = real_year, MONTH = real_month_num) %>% 
   # adding codes
   left_join(region_codes %>% distinct(STATE, STATE.CODE, COUNTY, COUNTY.CODE), 
             by = c("STATE.NAME" = "STATE", "DISTRICT.NAME" = "COUNTY")) %>% 
@@ -140,12 +140,12 @@ if (!file.exists(class_path)) {
   # if running the script more than once in any particular month, don't want to reappend to database
   # but we still need the objects in the environment
   
-  avoid_reappend <- (unique(concern_class_latest$YEAR) == cur_year & 
-                       unique(concern_class_latest$MONTH) == cur_month_num)
+  avoid_reappend <- (unique(concern_class_latest$YEAR) == real_year & 
+                       unique(concern_class_latest$MONTH) == real_month_num)
 
     concern_class_upd <- read_xlsx(class_path) %>% 
       {if (avoid_reappend) {
-        filter(., !(YEAR == cur_year & MONTH == cur_month_num)) # removing repeated rows
+        filter(., !(YEAR == real_year & MONTH == real_month_num)) # removing repeated rows
       }} %>%
       bind_rows(concern_class_cur) %>% 
       arrange(STATE.NAME, DISTRICT.NAME, YEAR, MONTH) %>% 
