@@ -32,18 +32,14 @@ if (!file.exists(thresh_path)) {
   } else {     
     
     temp0 <- data_invcomp %>% 
-      # join district geom then state names
-      left_join(dists_sf %>% dplyr::select(-STATE.NAME, -AREA)) %>% 
-      st_as_sf() %>% 
-      st_make_valid() %>% # to prevent issue with largest join
-      st_join(states_sf %>% st_make_valid(), largest = T) %>% 
-      st_drop_geometry() %>% 
       # reordering columns
-      dplyr::select(STATE.NAME, DISTRICT.NAME, S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
+      dplyr::select(STATE.CODE, STATE, COUNTY.CODE, COUNTY, 
+                    S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
       # removing districts with >=75% completeness cos they are of no concern
-      filter(!(INV.C >= 0.75))
+      filter(!(INV.C >= classify_concern(get_thresh_noconcern = TRUE)))
     
-    # only use new thresholds if one year has passed
+    
+    # only create and use new thresholds if one year has passed
     
     if (!(date_real - thresh1_cur$DATE >= 365)) {
 
@@ -58,7 +54,7 @@ if (!file.exists(thresh_path)) {
       
       # selecting thresholds based on unique values of completeness, dividing into 5 groups
       thresh1_cur <- temp0 %>% 
-        distinct(DISTRICT.NAME, INV.C) %>% 
+        distinct(STATE.CODE, STATE, COUNTY.CODE, COUNTY, INV.C) %>% 
         dplyr::select(INV.C) %>% 
         arrange(INV.C) %>% 
         rownames_to_column("ROW") %>% 
@@ -70,7 +66,7 @@ if (!file.exists(thresh_path)) {
         relocate(YEAR, MONTH, THRESH.FINE1, THRESH.FINE2, THRESH.FINE3, THRESH.FINE4)
       
       thresh2_cur <- temp0 %>% 
-        distinct(DISTRICT.NAME, INV.C) %>% 
+        distinct(STATE.CODE, STATE, COUNTY.CODE, COUNTY, INV.C) %>% 
         dplyr::select(INV.C) %>% 
         arrange(INV.C) %>% 
         rownames_to_column("ROW") %>% 
@@ -99,35 +95,28 @@ if (!file.exists(thresh_path)) {
 # classifying concern ---------------------------------------------------------------
 
 concern_class_cur <- temp0 %>% 
+  # adding columns of current year's thresholds
   bind_cols(thresh1_cur %>% dplyr::select(-YEAR, -MONTH, -DATE)) %>% 
   bind_cols(thresh2_cur %>% dplyr::select(-YEAR, -MONTH, -DATE)) %>% 
-  # levels of incompleteness based on thresholds (>=75% completeness of no concern)
-  mutate(CONCERN.FINE = case_when(INV.C < 0.75 & INV.C >= THRESH.FINE4 ~ 1,
-                                  INV.C < THRESH.FINE4 & INV.C >= THRESH.FINE3 ~ 2,
-                                  INV.C < THRESH.FINE3 & INV.C >= THRESH.FINE2 ~ 3,
-                                  INV.C < THRESH.FINE2 & INV.C >= THRESH.FINE1 ~ 4,
-                                  INV.C < THRESH.FINE1 ~ 5)) %>% 
-  mutate(CONCERN.COARSE = case_when(INV.C < 0.75 & INV.C >= THRESH.COARSE2 ~ "LOW",
-                                    INV.C < THRESH.COARSE2 & INV.C >= THRESH.COARSE1 ~ "MID",
-                                    INV.C < THRESH.COARSE1 ~ "HIGH")) %>% 
-  mutate(CONCERN.COARSE = factor(CONCERN.COARSE, levels = c("LOW", "MID", "HIGH"))) %>% 
-  arrange(desc(CONCERN.FINE), INV.C, desc(N.DIST), STATE.NAME, DISTRICT.NAME) %>% 
+  classify_concern("fine") %>% 
+  classify_concern("coarse") %>% 
+  arrange(desc(CONCERN.FINE), INV.C, desc(N.DIST), STATE.CODE, COUNTY.CODE) %>% 
   mutate(across(contains("THRESH."), ~ as.null(.))) %>% # remove threshold columns
-  mutate(YEAR = real_year, MONTH = real_month_num) %>% 
-  # adding codes
-  left_join(region_codes %>% distinct(STATE, STATE.CODE, COUNTY, COUNTY.CODE), 
-            by = c("STATE.NAME" = "STATE", "DISTRICT.NAME" = "COUNTY")) %>% 
-  relocate(STATE.CODE, COUNTY.CODE, STATE.NAME, DISTRICT.NAME, N.DIST, 
+  # saving as year-month combo of EBD release (instead of real-time year-month)
+  mutate(YEAR = currel_year, MONTH = currel_month_num) %>% 
+  relocate(STATE.CODE, COUNTY.CODE, STATE, COUNTY, N.DIST, 
            YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, S.OBS.DIST, S.EXP.DIST, S.EXP, INV.C)
 
 # not removing low concern category because this will be history of concern, so good to keep
 # they will be removed in the metrics to be tracked
 
 
-# each time updating new classifications to old ones
+# whether or not to append new classifications to old ones each time
+
 if (!file.exists(class_path)) {
   
-  concern_class_upd <- concern_class_cur %>% arrange(STATE.NAME, DISTRICT.NAME, YEAR, MONTH)
+  concern_class_upd <- concern_class_cur %>% 
+    arrange(STATE.CODE, COUNTY.CODE, YEAR, MONTH)
   
 } else {
   
@@ -135,21 +124,23 @@ if (!file.exists(class_path)) {
   concern_class_latest <- read_xlsx(class_path) %>% 
     group_by(pick(c(everything(), -MONTH))) %>% 
     arrange(MONTH) %>% 
-    slice_tail()
+    slice_tail() %>% 
+    ungroup()
   
-  # if running the script more than once in any particular month, don't want to reappend to database
+  # if running the script more than once in any particular month, don't want to create
+  # duplicate row
   # but we still need the objects in the environment
   
-  avoid_reappend <- (unique(concern_class_latest$YEAR) == real_year & 
-                       unique(concern_class_latest$MONTH) == real_month_num)
+  avoid_duplicate <- (unique(concern_class_latest$YEAR) == currel_year & 
+                       unique(concern_class_latest$MONTH) == currel_month_num)
 
     concern_class_upd <- read_xlsx(class_path) %>% 
-      {if (avoid_reappend) {
-        filter(., !(YEAR == real_year & MONTH == real_month_num)) # removing repeated rows
+      {if (avoid_duplicate) {
+        filter(., !(YEAR == currel_year & MONTH == currel_month_num)) # removing repeated rows
       }} %>%
       bind_rows(concern_class_cur) %>% 
-      arrange(STATE.NAME, DISTRICT.NAME, YEAR, MONTH) %>% 
-      relocate(STATE.CODE, COUNTY.CODE, STATE.NAME, DISTRICT.NAME, N.DIST, 
+      arrange(STATE.CODE, COUNTY.CODE, YEAR, MONTH) %>% 
+      relocate(STATE.CODE, COUNTY.CODE, STATE, COUNTY, N.DIST, 
                YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, S.OBS.DIST, S.EXP.DIST, S.EXP, INV.C)
     
 }

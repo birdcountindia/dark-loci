@@ -294,3 +294,43 @@ calc_mom <- function(level) {
   
 }
 
+
+# classify concern based on inventory completenss -----------------------------------
+
+classify_concern <- function(data, which_concern = NULL, get_thresh_noconcern = FALSE) {
+  
+  # threshold inventory completeness above which is no concern for our analyses
+  thresh_noconcern <- 0.75
+  
+  if (get_thresh_noconcern == TRUE) {
+    
+    return(thresh_noconcern)
+    
+  } else {
+    
+    if (which_concern == "fine") {
+      
+      classified <- data %>% 
+        # levels of incompleteness based on thresholds (>=75% completeness of no concern)
+        mutate(CONCERN.FINE = case_when(INV.C < thresh_noconcern & INV.C >= THRESH.FINE4 ~ 1,
+                                        INV.C < THRESH.FINE4 & INV.C >= THRESH.FINE3 ~ 2,
+                                        INV.C < THRESH.FINE3 & INV.C >= THRESH.FINE2 ~ 3,
+                                        INV.C < THRESH.FINE2 & INV.C >= THRESH.FINE1 ~ 4,
+                                        INV.C < THRESH.FINE1 ~ 5))
+      
+    } else if (which_concern == "coarse") {
+      
+      classified <- data %>% 
+        mutate(CONCERN.COARSE = case_when(INV.C < thresh_noconcern & INV.C >= THRESH.COARSE2 ~ "LOW",
+                                          INV.C < THRESH.COARSE2 & INV.C >= THRESH.COARSE1 ~ "MID",
+                                          INV.C < THRESH.COARSE1 ~ "HIGH")) %>% 
+        # converting to ordered factor
+        mutate(CONCERN.COARSE = factor(CONCERN.COARSE, levels = c("LOW", "MID", "HIGH")))
+        
+    }
+    
+    return(classified)
+    
+  }
+  
+}
