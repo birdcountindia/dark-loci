@@ -72,13 +72,13 @@ darkloci2 <- tribble(
 
 #
 
-darkloci1 <- darkloci1 %>% 
-  left_join(dists_sf, by = c("STATE.NAME", "DISTRICT.NAME")) %>% 
+darkloci1 <- dists_sf %>% 
+  right_join(darkloci1, by = c("STATE.NAME", "DISTRICT.NAME")) %>% 
   mutate(DL.NO = 1,
          DL.NAME = "Northeast")
 
-darkloci2 <- darkloci2 %>% 
-  left_join(dists_sf, by = c("STATE.NAME", "DISTRICT.NAME")) %>% 
+darkloci2 <- dists_sf %>% 
+  right_join(darkloci2, by = c("STATE.NAME", "DISTRICT.NAME")) %>% 
   mutate(DL.NO = 2,
          DL.NAME = "Magadha")
 
@@ -100,3 +100,4 @@ darkloci_sf <- bind_rows(darkloci1, darkloci2) %>%
 # writing
 save(darkloci1, darkloci2, darkloci, darkloci_sf,
      file = get_stage_obj_path("data", "id"))
+

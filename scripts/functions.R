@@ -49,14 +49,18 @@ get_stage_obj_path <- function(folder, stage, filetype = NULL, add_rel_str = FAL
   } else if (stage %in% c("id", "id-loci")) {
     "04_id-loci"
   } else if (stage %in% c("track", "track-metrics")) {
-    "05_track-metrics"
+    if (folder == "outputs") {
+      "metric_track"
+    } else {
+      "05_track-metrics"
+    }
   } else {
     return("Incorrect stage specification.")
   }
   
   # adding rel-YYYY string if needed
   if (add_rel_str == TRUE) {
-    stage_translation <- glue("{stage_translation}_{get_rel_str()}")
+    stage_translation <- glue("{stage_translation}_{get_rel_str(verbose = FALSE)}")
   }
   
   return(glue("{folder}/{stage_translation}{filetype}"))

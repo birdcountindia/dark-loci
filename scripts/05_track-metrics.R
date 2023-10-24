@@ -10,7 +10,7 @@ temp <- concern_class_upd %>%
   ungroup()
 
 concern_fine <- concern_class_cur %>% 
-  left_join(temp, by = c("STATE.NAME", "DISTRICT.NAME")) %>% 
+  left_join(temp, by = c("STATE.CODE", "COUNTY.CODE", "STATE", "COUNTY")) %>% 
   filter(!(ORIG.INV.C >= 0.75)) %>% 
   filter(ORIG.CONCERN.FINE != 1)
 
@@ -91,7 +91,9 @@ plot1 <- ((plot1_base +
                            name = "Concern level")) |
      # map with three concern colours
      (concern_coarse %>% 
-        left_join(dists_sf) %>% 
+        left_join(admin_unit_mapping, by = c("STATE.CODE", "STATE", "COUNTY.CODE", "COUNTY")) %>% 
+        left_join(dists_sf, 
+                  by = c("STATE.NAME", "DISTRICT.NAME")) %>% 
         ggplot() +
         # india outline
         geom_sf(data = india_sf, fill = "#D3D6D9") +
@@ -191,8 +193,7 @@ metric_state_cur <- get_concern_summary(concern_coarse, "state", CONCERN.COARSE)
 metric_dl_cur <- get_concern_summary(concern_coarse, "dl", CONCERN.COARSE)
 
 # each time updating new classifications to old ones
-if (!file.exists("outputs/metric_full.xlsx") &
-    !file.exists("outputs/metric_track.xlsx")) {
+if (!file.exists("outputs/metric_full.xlsx")) {
   
   metric_nat_upd <- metric_nat_cur %>% arrange(YEAR, MONTH)
   metric_state_upd <- metric_state_cur %>% arrange(STATE.CODE, STATE, YEAR, MONTH)
@@ -219,11 +220,10 @@ if (!file.exists("outputs/metric_full.xlsx") &
   write_xlsx(x = list("Country" = metric_nat_track,
                       "States" = metric_state_track,
                       "Dark clusters" = metric_dl_track),
-             path = "outputs/metric_track.xlsx")
+             path = get_stage_obj_path("outputs", "track", add_rel_str = TRUE))
   
   
-  } else if (file.exists("outputs/metric_full.xlsx") &
-             file.exists("outputs/metric_track.xlsx")) {
+  } else if (file.exists("outputs/metric_full.xlsx")) {
     
     metric_nat_data <- read_xlsx("outputs/metric_full.xlsx", sheet = 1)
     metric_state_data <- read_xlsx("outputs/metric_full.xlsx", sheet = 2)
@@ -310,7 +310,7 @@ if (!file.exists("outputs/metric_full.xlsx") &
     write_xlsx(x = list("Country" = metric_nat_track,
                         "States" = metric_state_track,
                         "Dark clusters" = metric_dl_track),
-               path = "outputs/metric_track.xlsx")
+               path = get_stage_obj_path("outputs", "track", add_rel_str = TRUE))
     
 }
 
