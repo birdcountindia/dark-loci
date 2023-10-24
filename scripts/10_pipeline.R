@@ -60,7 +60,8 @@ tictoc::toc() # 180 secs
 
 ### setting thresholds and classifying into concern categories
 tictoc::tic("Threshold setting and concern classification completed")
-source("scripts/03_thresholds.R")
+source("scripts/03_classify-concern.R")
+# load(get_stage_obj_path("data", "concern", add_rel_str = TRUE))
 tictoc::toc() # 55 secs
 
 # proportion of high concern districts can change MoM, e.g., when some additional birding somewhere

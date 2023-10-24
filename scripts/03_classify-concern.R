@@ -148,3 +148,6 @@ if (!file.exists(class_path)) {
 # writing objects
 write_xlsx(x = list("Concern classifications" = concern_class_upd),
            path = class_path)
+
+save(concern_class_upd, concern_class_cur, 
+     file = get_stage_obj_path("data", "concern", add_rel_str = TRUE))

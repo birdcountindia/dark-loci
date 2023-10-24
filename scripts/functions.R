@@ -39,8 +39,8 @@ get_stage_obj_path <- function(folder, stage, filetype = NULL, add_rel_str = FAL
     "01_data-spatialise"
   } else if (stage %in% c("comp", "completeness")) {
     "02_completeness"
-  } else if (stage %in% c("thresh", "thresholds")) {
-    "03_thresholds"
+  } else if (stage %in% c("class", "classify", "concern", "thresh", "thresholds")) {
+    "03_classify-concern"
   } else if (stage %in% c("id", "id-loci")) {
     "04_id-loci"
   } else if (stage %in% c("track", "track-metrics")) {
