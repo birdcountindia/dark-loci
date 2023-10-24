@@ -9,6 +9,9 @@
 source("https://raw.githubusercontent.com/birdcountindia/bci-functions/main/01_functions/summaries.R")
 source("https://raw.githubusercontent.com/birdcountindia/bci-functions/main/01_functions/mapping.R")
 
+# region codes to link state/district names with their codes
+load(url("https://github.com/birdcountindia/ebird-datasets/raw/main/region_codes.RData"))
+
 
 # joining mapvars --------------------------------------------------------
 
@@ -24,6 +27,7 @@ data_spat <- join_map_sf(data_slice_G) %>%
 tictoc::toc()
 
 # mapping state/dist between EBD and sf  --------------------------------------------
+
 
 # function to calc similarity of two strings (https://stackoverflow.com/a/11535768/13000254)
 str_similarity <- function(x, y) {
@@ -50,11 +54,17 @@ admin_unit_mapping <- data_spat %>%
   dplyr::select(-c(NAME.SIMILARITY, NO.LISTS)) %>% 
   arrange(STATE.CODE, COUNTY.CODE)
 
+# in each state, how many districts (from EBD)
+dists_per_state <- admin_unit_mapping %>% 
+  group_by(STATE.CODE, STATE) %>% 
+  dplyr::summarise(TOT.DIST = n_distinct(COUNTY.CODE))
+
 
 # writing ---------------------------------------------------------------------------
 
 # saving object at each (monthly) iteration because time-consuming step
 # but overwriting, because no need to have separate monthly checklist-map mappings
-save(data_spat, admin_unit_mapping, 
-     file = get_stage_obj_path("data", "spat"))
+save(data_spat, file = get_stage_obj_path("data", "spat"))
 
+save(admin_unit_mapping, dists_per_state,
+     file = "data/admin_units.RData")

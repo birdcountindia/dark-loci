@@ -14,18 +14,6 @@ load("../india-maps/outputs/maps_sf.RData")
 # load(url("https://github.com/birdcountindia/india-maps/raw/main/outputs/maps_sf.RData"))
 sf_use_s2(FALSE)
 
-# region codes to link state/district names with their codes
-load(url("https://github.com/birdcountindia/ebird-datasets/raw/main/region_codes.RData"))
-
-# in each state, how many districts
-state_dists <- dists_sf %>% 
-  st_drop_geometry() %>% 
-  dplyr::select(-AREA) %>% 
-  left_join(states_sf %>% dplyr::select(-AREA)) %>% 
-  st_drop_geometry() %>% 
-  group_by(STATE.NAME) %>% 
-  dplyr::summarise(TOT.DIST = n_distinct(DISTRICT.NAME))
-
 source("scripts/00_params.R")
 
 
@@ -36,7 +24,7 @@ data <- data_filt
 
 # spatialising data (add mapvars) ------------------------------------------------------
 
-# output is data_spat object
+# outputs are data_spat, admin_unit_mapping, dists_per_state objects
 
 tictoc::tic("Data spatialisation completed")
 source("scripts/01_data-spatialise.R")
@@ -45,6 +33,7 @@ tictoc::toc() # 18 mins
 
 # # if already run above previously, just unhash and run 2 lines below
 # load(get_stage_obj_path("data", "spat"))
+# load("data/admin_units.RData")
 
 
 # identifying Dark ------------------------------------------------------------------
