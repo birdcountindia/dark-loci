@@ -62,6 +62,7 @@ tictoc::toc() # 55 secs
 # identifying Dark Locus groups ------------------------------------------------------------------
 
 source("scripts/04_id-loci.R")
+# load(get_stage_obj_path("data", "id"))
 
 
 # metric summaries to track and monitor ---------------------------------------------
