@@ -44,7 +44,7 @@ tictoc::toc() # 18 mins
 
 
 # # if already run above previously, just unhash and run 2 lines below
-# load("data/01_data-spatialise.RData")
+# load(get_stage_obj_path("data", "spat"))
 
 
 # identifying Dark ------------------------------------------------------------------
