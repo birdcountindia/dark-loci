@@ -1,4 +1,15 @@
+path_metric_full_cur <- get_stage_obj_path("outputs", "track", substage = "full", 
+                                            add_rel_str = TRUE)
+path_metric_full_prev <- get_stage_obj_path("outputs", "track", substage = "full",
+                                             add_rel_str = TRUE, months_lag = 1)
+path_metric_track_cur <- get_stage_obj_path("outputs", "track", substage = "track", 
+                                            add_rel_str = TRUE)
+path_metric_track_prev <- get_stage_obj_path("outputs", "track", substage = "track",
+                                             add_rel_str = TRUE, months_lag = 1)
+
+
 track_cycle <- get_track_dates(date_currel)
+
 
 # filtering districts that were of no concern (fine and coarse) at the start of the track cycle
 temp <- concern_class_upd %>% 
@@ -193,7 +204,7 @@ metric_state_cur <- get_concern_summary(concern_coarse, "state", CONCERN.COARSE)
 metric_dl_cur <- get_concern_summary(concern_coarse, "dl", CONCERN.COARSE)
 
 # each time updating new classifications to old ones
-if (!file.exists("outputs/metric_full.xlsx")) {
+if (!file.exists(path_metric_full_prev) & !file.exists(path_metric_track_prev)) {
   
   metric_nat_upd <- metric_nat_cur %>% arrange(YEAR, MONTH)
   metric_state_upd <- metric_state_cur %>% arrange(STATE.CODE, STATE, YEAR, MONTH)
@@ -202,7 +213,7 @@ if (!file.exists("outputs/metric_full.xlsx")) {
   write_xlsx(x = list("Country" = metric_nat_upd,
                       "States" = metric_state_upd,
                       "Dark clusters" = metric_dl_upd),
-             path = "outputs/metric_full.xlsx")
+             path = path_metric_full_cur)
   
   
   metric_nat_track <- metric_nat_cur %>% 
@@ -220,14 +231,14 @@ if (!file.exists("outputs/metric_full.xlsx")) {
   write_xlsx(x = list("Country" = metric_nat_track,
                       "States" = metric_state_track,
                       "Dark clusters" = metric_dl_track),
-             path = get_stage_obj_path("outputs", "track", add_rel_str = TRUE))
+             path = path_metric_track_cur)
   
   
-  } else if (file.exists("outputs/metric_full.xlsx")) {
+  } else if (file.exists(path_metric_full_prev) & file.exists(path_metric_track_prev)) {
     
-    metric_nat_data <- read_xlsx("outputs/metric_full.xlsx", sheet = 1)
-    metric_state_data <- read_xlsx("outputs/metric_full.xlsx", sheet = 2)
-    metric_dl_data <- read_xlsx("outputs/metric_full.xlsx", sheet = 3)
+    metric_nat_data <- read_xlsx(path_metric_full_prev, sheet = 1)
+    metric_state_data <- read_xlsx(path_metric_full_prev, sheet = 2)
+    metric_dl_data <- read_xlsx(path_metric_full_prev, sheet = 3)
     
 
     # previous month's values (for MoM later)
@@ -287,7 +298,7 @@ if (!file.exists("outputs/metric_full.xlsx")) {
     write_xlsx(x = list("Country" = metric_nat_upd,
                         "States" = metric_state_upd,
                         "Dark clusters" = metric_dl_upd),
-               path = "outputs/metric_full.xlsx")
+               path = path_metric_full_cur)
 
     
     # MoM change (only current month in focus)
@@ -310,7 +321,7 @@ if (!file.exists("outputs/metric_full.xlsx")) {
     write_xlsx(x = list("Country" = metric_nat_track,
                         "States" = metric_state_track,
                         "Dark clusters" = metric_dl_track),
-               path = get_stage_obj_path("outputs", "track", add_rel_str = TRUE))
+               path = path_metric_track_cur)
     
 }
 

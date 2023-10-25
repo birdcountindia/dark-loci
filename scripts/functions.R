@@ -25,7 +25,8 @@ get_rel_str <- function(months_lag = 0, verbose = TRUE) {
 # of different stages in the analyses, so this function makes it easier
 # to reference the appropriate paths
 
-get_stage_obj_path <- function(folder, stage, filetype = NULL, add_rel_str = FALSE) {
+get_stage_obj_path <- function(folder, stage, substage = NULL, 
+                               filetype = NULL, add_rel_str = FALSE, months_lag = 0) {
 
   if (!folder %in% c("data", "outputs", "scripts")) {
     
@@ -43,6 +44,14 @@ get_stage_obj_path <- function(folder, stage, filetype = NULL, add_rel_str = FAL
     
   } 
   
+  if (stage == "track") {
+    if (is.null(substage)) {
+      return("Please select one output of {track, full}")
+    } else if (!(substage %in% c("track", "full"))) {
+      return("Substage should be one of {track, full}")
+    }
+  }
+  
   stage_translation <- if (stage == "params") {
     "00_params"
   } else if (stage %in% c("spat", "spatialise", "data-spatialise")) {
@@ -55,7 +64,7 @@ get_stage_obj_path <- function(folder, stage, filetype = NULL, add_rel_str = FAL
     "04_id-loci"
   } else if (stage %in% c("track", "track-metrics")) {
     if (folder == "outputs") {
-      "metric_track"
+      glue("metric_{substage}")
     } else {
       "05_track-metrics"
     }
@@ -65,7 +74,7 @@ get_stage_obj_path <- function(folder, stage, filetype = NULL, add_rel_str = FAL
   
   # adding rel-YYYY string if needed
   if (add_rel_str == TRUE) {
-    stage_translation <- glue("{stage_translation}_{get_rel_str(verbose = FALSE)}")
+    stage_translation <- glue("{stage_translation}_{get_rel_str(months_lag, verbose = FALSE)}")
   }
   
   return(glue("{folder}/{stage_translation}{filetype}"))
