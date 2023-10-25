@@ -1,13 +1,18 @@
 # get relMON-YYYY or rel-YYYYMM string -----------------------------------------------------
 
-get_rel_str <- function(verbose = TRUE) {
+get_rel_str <- function(months_lag = 0, verbose = TRUE) {
   
   # params must be loaded in environment
   
+  # negative lag will return future months
+  req_year <- (date_currel - months(months_lag)) %>% year()
+  req_month_lab <- (date_currel - months(months_lag)) %>% month(label = T, abbr = T)
+  req_month_num <- (date_currel - months(months_lag)) %>% month()
+  
   rel_str <- if (verbose == TRUE) {
-    glue("rel{currel_month_lab}-{currel_year}")
+    glue("rel{req_month_lab}-{req_year}")
   } else {
-    glue("rel-{currel_year}{currel_month_num %>% str_pad(2, pad = '0')}")
+    glue("rel-{req_year}{req_month_num %>% str_pad(2, pad = '0')}")
   }
   
   return(rel_str)
