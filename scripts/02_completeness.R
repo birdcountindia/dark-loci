@@ -28,7 +28,7 @@ ecoregions <- ecoregions %>%
 
 # calculating expected species richness ---------------------------------------
 
-# calculating S.EXP for each ecoregion, then INV.COMP per district, according to which 1-2
+# calculating SPEC.EXP for each ecoregion, then INV.COMP per district, according to which 1-2
 # ecoregions it comes under
 tictoc::tic("Spatial joins of districts and ecoregions to main data")
 data_ecoreg_sf <- data_spat %>% 
@@ -53,7 +53,7 @@ eco_dist_link <- data_ecoreg %>%
   filter(!is.na(COUNTY) & !is.na(COUNTY.CODE))
 
 
-# 1. S.EXP for each ecoregion
+# 1. SPEC.EXP for each ecoregion
 
 temp1 <- data_ecoreg %>% 
   # how many lists species reported from
@@ -72,16 +72,16 @@ ecoregion_exp <- data_ecoreg %>%
   filter(!is.na(ECOREGION)) %>% 
   # number of lists (N) and species (s_obs) from ecoregion 
   group_by(ECOREGION) %>% 
-  summarise(N.ECO = n_distinct(SAMPLING.EVENT.IDENTIFIER),
-            S.OBS.ECO = n_distinct(COMMON.NAME)) %>% 
+  summarise(LISTS.ECO = n_distinct(SAMPLING.EVENT.IDENTIFIER),
+            SPEC.OBS.ECO = n_distinct(COMMON.NAME)) %>% 
   left_join(temp1) %>% 
-  # calculating S.EXP for ecoregion
-  mutate(S.EXP.ECO = calc_exp_spec(S.OBS.ECO, N.ECO, Q1.ECO, Q2.ECO) %>% floor()) %>% 
-  # linking ecoregions with districts, to average S.EXP.ECO across multiple
+  # calculating SPEC.EXP for ecoregion
+  mutate(SPEC.EXP.ECO = calc_exp_spec(SPEC.OBS.ECO, LISTS.ECO, Q1.ECO, Q2.ECO) %>% floor()) %>% 
+  # linking ecoregions with districts, to average SPEC.EXP.ECO across multiple
   # ecoregions per district
   right_join(eco_dist_link) %>% 
   group_by(STATE.CODE, STATE, COUNTY.CODE, COUNTY) %>% 
-  summarise(S.EXP.ECO = floor(mean(S.EXP.ECO))) %>% 
+  summarise(SPEC.EXP.ECO = floor(mean(SPEC.EXP.ECO))) %>% 
   ungroup()
 
 
@@ -106,25 +106,25 @@ district_exp <- data_ecoreg %>%
   filter(!is.na(COUNTY.CODE)) %>% 
   # number of lists (N) and species (s_obs) from district 
   group_by(STATE.CODE, STATE, COUNTY.CODE, COUNTY) %>% 
-  summarise(N.DIST = n_distinct(SAMPLING.EVENT.IDENTIFIER),
-            S.OBS.DIST = n_distinct(COMMON.NAME)) %>% 
+  summarise(LISTS.DIST = n_distinct(SAMPLING.EVENT.IDENTIFIER),
+            SPEC.OBS.DIST = n_distinct(COMMON.NAME)) %>% 
   ungroup() %>% 
   left_join(temp2) %>% 
-  # calculating S.EXP for district based on existing lists from district
-  mutate(S.EXP.DIST = calc_exp_spec(S.OBS.DIST, N.DIST, Q1.DIST, Q2.DIST) %>% 
+  # calculating SPEC.EXP for district based on existing lists from district
+  mutate(SPEC.EXP.DIST = calc_exp_spec(SPEC.OBS.DIST, LISTS.DIST, Q1.DIST, Q2.DIST) %>% 
            floor()) %>% 
   # this brings in districts with no lists
   full_join(ecoregion_exp) %>% 
-  replace_na(list(N.DIST = 0, S.OBS.DIST = 0, S.EXP.DIST = 0)) %>% 
-  # calculating S.EXP for district based on existing lists AND on S.EXP of ecoregion
-  mutate(S.EXP = floor((S.EXP.DIST + S.EXP.ECO)/2))
+  replace_na(list(LISTS.DIST = 0, SPEC.OBS.DIST = 0, SPEC.EXP.DIST = 0)) %>% 
+  # calculating SPEC.EXP for district based on existing lists AND on SPEC.EXP of ecoregion
+  mutate(SPEC.EXP = floor((SPEC.EXP.DIST + SPEC.EXP.ECO)/2))
 
 
 # calculating inventory completeness --------------------------------------
 
 data_invcomp <- district_exp %>% 
   # calculating C
-  mutate(INV.C = calc_inv_comp(S.EXP, S.OBS.DIST) %>% 
+  mutate(INV.C = calc_inv_comp(SPEC.EXP, SPEC.OBS.DIST) %>% 
            round(2))
   
   

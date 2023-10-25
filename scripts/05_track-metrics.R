@@ -44,8 +44,8 @@ write_xlsx(x = list("Country" = status_nat,
 
 # bins for number of lists per district
 n_bins <- concern_fine %>% 
-  distinct(N.DIST) %>% 
-  arrange(N.DIST) %>% 
+  distinct(LISTS.DIST) %>% 
+  arrange(LISTS.DIST) %>% 
   rownames_to_column("ROW") %>% 
   mutate(ROW = as.numeric(ROW))
 
@@ -54,7 +54,7 @@ temp <- seq(min(n_bins$ROW), max(n_bins$ROW), length.out = 6) %>% floor()
 n_bins <- n_bins %>% 
   # selecting thresholds
   filter(ROW %in% temp) %>% 
-  dplyr::select(N.DIST)
+  dplyr::select(LISTS.DIST)
 
 
 plot1_base <- concern_fine %>% 
@@ -80,10 +80,10 @@ plot1 <- ((plot1_base +
              scale_fill_viridis_c(option = "inferno", 
                                   name = "Inventory (species)\ncompleteness")) |
             (plot1_base +
-               geom_sf(aes(geometry = DISTRICT.GEOM, fill = N.DIST)) +
+               geom_sf(aes(geometry = DISTRICT.GEOM, fill = LISTS.DIST)) +
                scale_fill_viridis_b(option = "inferno", 
-                                    breaks = n_bins$N.DIST, 
-                                    limits = c(min(n_bins$N.DIST), max(n_bins$N.DIST)),
+                                    breaks = n_bins$LISTS.DIST, 
+                                    limits = c(min(n_bins$LISTS.DIST), max(n_bins$LISTS.DIST)),
                                     name = "Current no.\nof lists"))) /
   ((plot1_base +
       geom_sf(aes(geometry = DISTRICT.GEOM, fill = as.factor(CONCERN.FINE))) +

@@ -34,7 +34,7 @@ if (!file.exists(thresh_path)) {
     temp0 <- data_invcomp %>% 
       # reordering columns
       dplyr::select(STATE.CODE, STATE, COUNTY.CODE, COUNTY, 
-                    S.OBS.DIST, S.EXP.DIST, S.EXP, N.DIST, INV.C) %>% 
+                    SPEC.OBS.DIST, SPEC.EXP.DIST, SPEC.EXP, LISTS.DIST, INV.C) %>% 
       # removing districts with >=75% completeness cos they are of no concern
       filter(!(INV.C >= classify_concern(get_thresh_noconcern = TRUE)))
     
@@ -100,12 +100,12 @@ concern_class_cur <- temp0 %>%
   bind_cols(thresh2_cur %>% dplyr::select(-YEAR, -MONTH, -DATE)) %>% 
   classify_concern("fine") %>% 
   classify_concern("coarse") %>% 
-  arrange(desc(CONCERN.FINE), INV.C, desc(N.DIST), STATE.CODE, COUNTY.CODE) %>% 
+  arrange(desc(CONCERN.FINE), INV.C, desc(LISTS.DIST), STATE.CODE, COUNTY.CODE) %>% 
   mutate(across(contains("THRESH."), ~ as.null(.))) %>% # remove threshold columns
   # saving as year-month combo of EBD release (instead of real-time year-month)
   mutate(YEAR = currel_year, MONTH = currel_month_num) %>% 
-  relocate(STATE.CODE, COUNTY.CODE, STATE, COUNTY, N.DIST, 
-           YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, S.OBS.DIST, S.EXP.DIST, S.EXP, INV.C)
+  relocate(STATE.CODE, COUNTY.CODE, STATE, COUNTY, LISTS.DIST, 
+           YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, SPEC.OBS.DIST, SPEC.EXP.DIST, SPEC.EXP, INV.C)
 
 # not removing low concern category because this will be history of concern, so good to keep
 # they will be removed in the metrics to be tracked
@@ -140,8 +140,8 @@ if (!file.exists(class_path)) {
       }} %>%
       bind_rows(concern_class_cur) %>% 
       arrange(STATE.CODE, COUNTY.CODE, YEAR, MONTH) %>% 
-      relocate(STATE.CODE, COUNTY.CODE, STATE, COUNTY, N.DIST, 
-               YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, S.OBS.DIST, S.EXP.DIST, S.EXP, INV.C)
+      relocate(STATE.CODE, COUNTY.CODE, STATE, COUNTY, LISTS.DIST, 
+               YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, SPEC.OBS.DIST, SPEC.EXP.DIST, SPEC.EXP, INV.C)
     
 }
 
