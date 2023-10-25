@@ -44,7 +44,11 @@ get_stage_obj_path <- function(folder, stage, substage = NULL,
     
   } 
   
-  if (stage == "track") {
+  if (stage != "track") {
+    if (!is.null(substage)) {
+      return("Substage can be set only for outputs of 05_track-metrics")
+    }
+  } else if (stage == "track") {
     if (is.null(substage)) {
       return("Please select one output of {track, full}")
     } else if (!(substage %in% c("track", "full"))) {
@@ -59,7 +63,11 @@ get_stage_obj_path <- function(folder, stage, substage = NULL,
   } else if (stage %in% c("comp", "completeness")) {
     "02_completeness"
   } else if (stage %in% c("class", "classify", "concern", "thresh", "thresholds")) {
-    "03_classify-concern"
+    if (folder == "outputs") {
+      glue("concern_classification")
+    } else {
+      "03_classify-concern"
+    }
   } else if (stage %in% c("id", "id-loci")) {
     "04_id-loci"
   } else if (stage %in% c("track", "track-metrics")) {

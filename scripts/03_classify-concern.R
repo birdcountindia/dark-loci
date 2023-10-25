@@ -1,5 +1,6 @@
-thresh_path <- "outputs/concern_thresh.xlsx"
-class_path <- "outputs/concern_classification.xlsx"
+path_thresh <- "outputs/concern_thresh.xlsx"
+path_class_cur <- get_stage_obj_path("outputs", "class", add_rel_str = TRUE)
+path_class_prev <- get_stage_obj_path("outputs", "class", add_rel_str = TRUE, months_lag = 1)
 
 
 # defining thresholds ---------------------------------------------------------------
@@ -7,17 +8,17 @@ class_path <- "outputs/concern_classification.xlsx"
 # we should use the same threshold levels for one full year, only changing it in the next year
 # this is to allow meaningful comparisons month-to-month for tracking
 
-if (!file.exists(thresh_path)) {
+if (!file.exists(path_thresh)) {
   
   return("No previous file for threshold definitions!")
   
 } else {
   
   # original database of threshold levels
-  thresh1_data <- read_xlsx(thresh_path, sheet = "FINE") %>% 
+  thresh1_data <- read_xlsx(path_thresh, sheet = "FINE") %>% 
     mutate(DATE = str_c(YEAR, str_pad(MONTH, 2, pad = "0"), "01", sep = "-") %>% as_date())
   
-  thresh2_data <- read_xlsx(thresh_path, sheet = "COARSE") %>% 
+  thresh2_data <- read_xlsx(path_thresh, sheet = "COARSE") %>% 
     mutate(DATE = str_c(YEAR, str_pad(MONTH, 2, pad = "0"), "01", sep = "-") %>% as_date())
   
   
@@ -83,7 +84,7 @@ if (!file.exists(thresh_path)) {
       thresh2_data <- thresh2_data %>% bind_rows(thresh2_cur) %>% arrange(YEAR, MONTH)
       
       write_xlsx(x = list("FINE" = thresh1_data, "COARSE" = thresh2_data),
-                 path = thresh_path)
+                 path = path_thresh)
       
       print("Using updated threshold definitions.")
       
@@ -113,7 +114,7 @@ concern_class_cur <- temp0 %>%
 
 # whether or not to append new classifications to old ones each time
 
-if (!file.exists(class_path)) {
+if (!file.exists(path_class_prev)) {
   
   concern_class_upd <- concern_class_cur %>% 
     arrange(STATE.CODE, COUNTY.CODE, YEAR, MONTH)
@@ -121,7 +122,7 @@ if (!file.exists(class_path)) {
 } else {
   
   # need latest (month before current) classification for each district in the country
-  concern_class_latest <- read_xlsx(class_path) %>% 
+  concern_class_latest <- read_xlsx(path_class_prev) %>% 
     group_by(pick(c(everything(), -MONTH))) %>% 
     arrange(MONTH) %>% 
     slice_tail() %>% 
@@ -134,7 +135,7 @@ if (!file.exists(class_path)) {
   avoid_duplicate <- (unique(concern_class_latest$YEAR) == currel_year & 
                        unique(concern_class_latest$MONTH) == currel_month_num)
 
-    concern_class_upd <- read_xlsx(class_path) %>% 
+    concern_class_upd <- read_xlsx(path_class_prev) %>% 
       {if (avoid_duplicate) {
         filter(., !(YEAR == currel_year & MONTH == currel_month_num)) # removing repeated rows
       }} %>%
@@ -147,7 +148,7 @@ if (!file.exists(class_path)) {
 
 # writing objects
 write_xlsx(x = list("Concern classifications" = concern_class_upd),
-           path = class_path)
+           path = path_class_cur)
 
 save(concern_class_upd, concern_class_cur, 
      file = get_stage_obj_path("data", "concern", add_rel_str = TRUE))
