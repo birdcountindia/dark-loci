@@ -1,11 +1,21 @@
+# get relMON-YYYY or rel-YYYYMM string -----------------------------------------------------
 
-# get rel-YYYY string -----------------------------------------------------
-
-get_rel_str <- function() {
+get_rel_str <- function(months_lag = 0, verbose = TRUE) {
   
   # params must be loaded in environment
   
-  glue("rel{rel_month_lab}-{rel_year}")
+  # negative lag will return future months
+  req_year <- (date_currel - months(months_lag)) %>% year()
+  req_month_lab <- (date_currel - months(months_lag)) %>% month(label = T, abbr = T)
+  req_month_num <- (date_currel - months(months_lag)) %>% month()
+  
+  rel_str <- if (verbose == TRUE) {
+    glue("rel{req_month_lab}-{req_year}")
+  } else {
+    glue("rel-{req_year}{req_month_num %>% str_pad(2, pad = '0')}")
+  }
+  
+  return(rel_str)
   
 }
 
@@ -15,7 +25,8 @@ get_rel_str <- function() {
 # of different stages in the analyses, so this function makes it easier
 # to reference the appropriate paths
 
-get_stage_obj_path <- function(folder, stage, filetype = NULL, add_rel_str = FALSE) {
+get_stage_obj_path <- function(folder, stage, substage = NULL, 
+                               filetype = NULL, add_rel_str = FALSE, months_lag = 0) {
 
   if (!folder %in% c("data", "outputs", "scripts")) {
     
@@ -33,25 +44,45 @@ get_stage_obj_path <- function(folder, stage, filetype = NULL, add_rel_str = FAL
     
   } 
   
+  if (stage != "track") {
+    if (!is.null(substage)) {
+      return("Substage can be set only for outputs of 05_track-metrics")
+    }
+  } else if (stage == "track" & folder == "outputs") {
+    if (is.null(substage)) {
+      return("Please select substage, one of {track, full}")
+    } else if (!(substage %in% c("track", "full"))) {
+      return("Substage should be one of {track, full}")
+    }
+  }
+  
   stage_translation <- if (stage == "params") {
     "00_params"
-  } else if (stage %in% c("import", "data-import")) {
-    "01_data-import"
+  } else if (stage %in% c("spat", "spatialise", "data-spatialise")) {
+    "01_data-spatialise"
   } else if (stage %in% c("comp", "completeness")) {
     "02_completeness"
-  } else if (stage %in% c("thresh", "thresholds")) {
-    "03_thresholds"
+  } else if (stage %in% c("class", "classify", "concern", "thresh", "thresholds")) {
+    if (folder == "outputs") {
+      glue("concern_classification")
+    } else {
+      "03_classify-concern"
+    }
   } else if (stage %in% c("id", "id-loci")) {
     "04_id-loci"
   } else if (stage %in% c("track", "track-metrics")) {
-    "05_track-metrics"
+    if (folder == "outputs") {
+      glue("metric_{substage}")
+    } else {
+      "05_track-metrics"
+    }
   } else {
     return("Incorrect stage specification.")
   }
   
   # adding rel-YYYY string if needed
   if (add_rel_str == TRUE) {
-    stage_translation <- glue("{stage_translation}_{get_rel_str()}")
+    stage_translation <- glue("{stage_translation}_{get_rel_str(months_lag, verbose = FALSE)}")
   }
   
   return(glue("{folder}/{stage_translation}{filetype}"))
@@ -83,10 +114,10 @@ get_concern_summary <- function(concern_data, scale, concern_col) {
       # removing districts of no concern (NA)
       filter(!is.na({{ concern_col }})) %>%
       group_by({{ concern_col }}) %>%
-      summarise(NO.DIST = n_distinct(DISTRICT.NAME)) %>%
+      summarise(NO.DIST = n_distinct(COUNTY.CODE)) %>%
       ungroup() %>%
       # to calculate proportion
-      mutate(TOT.DIST = n_distinct(dists_sf$DISTRICT.NAME),
+      mutate(TOT.DIST = n_distinct(admin_unit_mapping$COUNTY.CODE),
              PROP.DIST = round(100*NO.DIST/TOT.DIST, 2)) %>%
       dplyr::select(-NO.DIST, -TOT.DIST) %>%
       # filling zeroes
@@ -104,7 +135,7 @@ get_concern_summary <- function(concern_data, scale, concern_col) {
       mutate(across(everything(), ~ replace_na(.x, 0))) %>%
       {if (str_detect(concern_col_str, "COARSE")) {
         arrange(., desc(CONCERN.HIGH), desc(CONCERN.MID), desc(CONCERN.LOW)) %>%
-          mutate(YEAR = cur_year, MONTH = cur_month_num) %>%
+          mutate(YEAR = currel_year, MONTH = currel_month_num) %>%
           relocate(YEAR, MONTH, CONCERN.LOW, CONCERN.MID, CONCERN.HIGH)
       } else {
         arrange(., desc(CONCERN.5), desc(CONCERN.4), desc(CONCERN.3), desc(CONCERN.2), desc(CONCERN.1))
@@ -120,40 +151,33 @@ get_concern_summary <- function(concern_data, scale, concern_col) {
     concern_summary <- concern_data %>% 
       # removing districts of no concern (NA)
       filter(!is.na({{ concern_col }})) %>%
-      group_by(STATE.NAME, {{ concern_col }}) %>% ###
-      summarise(NO.DIST = n_distinct(DISTRICT.NAME)) %>%
+      group_by(STATE.CODE, STATE, {{ concern_col }}) %>% 
+      summarise(NO.DIST = n_distinct(COUNTY.CODE)) %>%
       ungroup() %>%
       # to calculate proportion
-      left_join(state_dists) %>% # joins number of districts per state ###
+      left_join(dists_per_state, by = c("STATE.CODE", "STATE")) %>% 
       mutate(PROP.DIST = round(100*NO.DIST/TOT.DIST, 2)) %>%
       dplyr::select(-NO.DIST, -TOT.DIST) %>%
-      filter(!is.na(STATE.NAME)) %>% ###
       # filling zeroes
-      group_by(STATE.NAME) %>% ###
+      group_by(STATE.CODE, STATE) %>% 
       {if (str_detect(concern_col_str, "COARSE")) {
         complete(., {{ concern_col }},
                  fill = list(PROP.DIST = 0))
       } else {
         complete(., {{ concern_col }} := 1:5,
                  fill = list(PROP.DIST = 0))
-      }
-      } %>%
+      }} %>%
       ungroup() %>% 
       pivot_wider(names_from = all_of(concern_col_str), values_from = "PROP.DIST") %>%
-      magrittr::set_colnames(c("STATE.NAME", new_colnames)) %>% ###
+      magrittr::set_colnames(c("STATE.CODE", "STATE", new_colnames)) %>% 
       mutate(across(contains("CONCERN."), ~ replace_na(.x, 0))) %>% ###
       {if (str_detect(concern_col_str, "COARSE")) {
         arrange(., desc(CONCERN.HIGH), desc(CONCERN.MID), desc(CONCERN.LOW)) %>%
-          # adding state codes
-          left_join(region_codes %>% distinct(STATE, STATE.CODE), by = c("STATE.NAME" = "STATE")) %>% ###
-          mutate(YEAR = cur_year, MONTH = cur_month_num) %>%
-          relocate(STATE.CODE, STATE.NAME, YEAR, MONTH, CONCERN.LOW, CONCERN.MID, CONCERN.HIGH)
+          mutate(YEAR = currel_year, MONTH = currel_month_num) %>%
+          relocate(STATE.CODE, STATE, YEAR, MONTH, CONCERN.LOW, CONCERN.MID, CONCERN.HIGH)
       } else {
-        arrange(., desc(CONCERN.5), desc(CONCERN.4), desc(CONCERN.3), desc(CONCERN.2), desc(CONCERN.1)) %>% 
-          # adding state codes
-          left_join(region_codes %>% distinct(STATE, STATE.CODE), by = c("STATE.NAME" = "STATE"))
-      }
-      }
+        arrange(., desc(CONCERN.5), desc(CONCERN.4), desc(CONCERN.3), desc(CONCERN.2), desc(CONCERN.1))
+      }}
     
     return(concern_summary)
     
@@ -166,12 +190,12 @@ get_concern_summary <- function(concern_data, scale, concern_col) {
       filter(!is.na({{ concern_col }})) %>%
       inner_join(darkloci) %>% # inner because we don't want LOW districts ###
       group_by(DL.NAME, {{ concern_col }}) %>% ###
-      summarise(NO.DIST = n_distinct(DISTRICT.NAME)) %>%
+      summarise(NO.DIST = n_distinct(COUNTY.CODE)) %>%
       ungroup() %>%
       # to calculate proportion (joins number of districts per dark cluster)
       left_join(darkloci %>%
                   group_by(DL.NAME) %>%
-                  dplyr::summarise(TOT.DIST = n_distinct(DISTRICT.NAME))) %>% ###
+                  dplyr::summarise(TOT.DIST = n_distinct(COUNTY.CODE))) %>% ###
       mutate(PROP.DIST = round(100*NO.DIST/TOT.DIST, 2)) %>%
       dplyr::select(-NO.DIST, -TOT.DIST) %>%
       filter(!is.na(DL.NAME)) %>% ###
@@ -183,24 +207,43 @@ get_concern_summary <- function(concern_data, scale, concern_col) {
       } else {
         complete(., {{ concern_col }} := 1:5,
                  fill = list(PROP.DIST = 0))
-      }
-      }  %>%
+      }} %>%
       ungroup() %>%
       pivot_wider(names_from = all_of(concern_col_str), values_from = "PROP.DIST") %>%
       magrittr::set_colnames(c("DL.NAME", new_colnames)) %>% ###
       mutate(across(contains("CONCERN."), ~ replace_na(.x, 0))) %>%
       {if (str_detect(concern_col_str, "COARSE")) {
         arrange(., desc(CONCERN.HIGH), desc(CONCERN.MID), desc(CONCERN.LOW)) %>%
-          mutate(YEAR = cur_year, MONTH = cur_month_num) %>%
+          mutate(YEAR = currel_year, MONTH = currel_month_num) %>%
           relocate(DL.NAME, YEAR, MONTH, CONCERN.LOW, CONCERN.MID, CONCERN.HIGH)
       } else {
         arrange(., desc(CONCERN.5), desc(CONCERN.4), desc(CONCERN.3), desc(CONCERN.2), desc(CONCERN.1))
-      }
-      }
+      }}
     
     return(concern_summary)
     
   }
+  
+}
+
+
+# functions for calculating inventory completeness ----------------------------------
+
+calc_exp_spec <- function(s_obs, N, q1, q2) {
+  
+  s_exp <- s_obs + ( ((N - 1)/N) * ((q1*(q1 - 1)) / (2*(q2 + 1))) )
+  
+  return(s_exp)
+  
+}
+
+calc_inv_comp <- function(s_exp, s_obs) {
+  
+  # for districts like Nicobars, district has more species than ecoregion
+  # so completeness > 1
+  C <- ifelse(s_obs > s_exp, 1, s_obs/s_exp)
+  
+  return(C)
   
 }
 
@@ -214,20 +257,20 @@ calc_mom <- function(level) {
   
   if (level == "nat") {
     
-    metric_latest <- metric1_nat_latest
-    metric_cur <- metric1_nat_cur
+    metric_latest <- metric_nat_latest
+    metric_cur <- metric_nat_cur
     new_colnames <- c("OLD", "CUR")
     
   } else if (level == "state") {
     
-    metric_latest <- metric1_state_latest
-    metric_cur <- metric1_state_cur
-    new_colnames <- c("STATE.NAME", "STATE.CODE", "OLD", "CUR")
+    metric_latest <- metric_state_latest
+    metric_cur <- metric_state_cur
+    new_colnames <- c("STATE.CODE", "STATE.NAME", "OLD", "CUR")
     
   } else if (level == "dl") {
     
-    metric_latest <- metric1_dl_latest
-    metric_cur <- metric1_dl_cur
+    metric_latest <- metric_dl_latest
+    metric_cur <- metric_dl_cur
     new_colnames <-c("DL.NAME", "OLD", "CUR")
     
   } else {
@@ -241,7 +284,7 @@ calc_mom <- function(level) {
     
     mom <- metric_cur %>% 
       {if (level == "state") {
-        group_by(., STATE.NAME)
+        group_by(., STATE.CODE, STATE)
       } else if (level == "dl") {
         group_by(., DL.NAME)
       } else {
@@ -252,12 +295,12 @@ calc_mom <- function(level) {
   } else {
     
     mom <- metric_latest %>% 
+      bind_rows(metric_cur) %>% 
       mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL) %>% 
-      bind_rows(metric_cur %>% mutate(CONCERN.LOW = NULL, CONCERN.MID = NULL)) %>% 
       arrange(YEAR, MONTH) %>% 
       mutate(YEAR = NULL) %>% 
       {if (level == "state") {
-        group_by(., STATE.NAME)
+        group_by(., STATE.CODE, STATE)
       } else if (level == "dl") {
         group_by(., DL.NAME)
       } else {
@@ -273,3 +316,61 @@ calc_mom <- function(level) {
   
 }
 
+
+# classify concern based on inventory completenss -----------------------------------
+
+classify_concern <- function(data, which_concern = NULL, get_thresh_noconcern = FALSE) {
+  
+  # threshold inventory completeness above which is no concern for our analyses
+  thresh_noconcern <- 0.75
+  
+  if (get_thresh_noconcern == TRUE) {
+    
+    return(thresh_noconcern)
+    
+  } else {
+    
+    if (which_concern == "fine") {
+      
+      classified <- data %>% 
+        # levels of incompleteness based on thresholds (>=75% completeness of no concern)
+        mutate(CONCERN.FINE = case_when(INV.C < thresh_noconcern & INV.C >= THRESH.FINE4 ~ 1,
+                                        INV.C < THRESH.FINE4 & INV.C >= THRESH.FINE3 ~ 2,
+                                        INV.C < THRESH.FINE3 & INV.C >= THRESH.FINE2 ~ 3,
+                                        INV.C < THRESH.FINE2 & INV.C >= THRESH.FINE1 ~ 4,
+                                        INV.C < THRESH.FINE1 ~ 5))
+      
+    } else if (which_concern == "coarse") {
+      
+      classified <- data %>% 
+        mutate(CONCERN.COARSE = case_when(INV.C < thresh_noconcern & INV.C >= THRESH.COARSE2 ~ "LOW",
+                                          INV.C < THRESH.COARSE2 & INV.C >= THRESH.COARSE1 ~ "MID",
+                                          INV.C < THRESH.COARSE1 ~ "HIGH")) %>% 
+        # converting to ordered factor
+        mutate(CONCERN.COARSE = factor(CONCERN.COARSE, levels = c("LOW", "MID", "HIGH")))
+        
+    }
+    
+    return(classified)
+    
+  }
+  
+}
+
+# get start and end dates for current tracking cycle --------------------------------
+
+get_track_dates <- function(cur_ebd_rel) {
+  
+  # these dates are EBD release dates (not real-time year and month)
+  
+  track_cycles <- data.frame(
+    START = seq(as_date("2023-02-01"), length.out = 10, by = "years"),
+    END = seq(as_date("2024-01-01"), length.out = 10, by = "years"),
+    CYCLE = 1:10
+  ) %>% 
+    mutate(CUR = case_when(cur_ebd_rel >= START & cur_ebd_rel <= END ~ TRUE,
+                           TRUE ~ FALSE))
+  
+  return(track_cycles %>% filter(CUR == TRUE) %>% dplyr::select(-CUR))
+  
+}
