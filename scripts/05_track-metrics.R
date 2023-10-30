@@ -325,3 +325,10 @@ if (!file.exists(path_metric_full_prev) & !file.exists(path_metric_track_prev)) 
     
 }
 
+
+# writing objects -------------------------------------------------------------------
+
+save(concern_fine, concern_coarse, 
+     status_nat, status_state, status_dl,
+     metric_nat_track, metric_state_track, metric_dl_track,
+     file = get_stage_obj_path("data", "track", add_rel_str = TRUE))

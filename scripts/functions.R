@@ -48,9 +48,9 @@ get_stage_obj_path <- function(folder, stage, substage = NULL,
     if (!is.null(substage)) {
       return("Substage can be set only for outputs of 05_track-metrics")
     }
-  } else if (stage == "track") {
+  } else if (stage == "track" & folder == "outputs") {
     if (is.null(substage)) {
-      return("Please select one output of {track, full}")
+      return("Please select substage, one of {track, full}")
     } else if (!(substage %in% c("track", "full"))) {
       return("Substage should be one of {track, full}")
     }
@@ -265,7 +265,7 @@ calc_mom <- function(level) {
     
     metric_latest <- metric_state_latest
     metric_cur <- metric_state_cur
-    new_colnames <- c("STATE.NAME", "STATE.CODE", "OLD", "CUR")
+    new_colnames <- c("STATE.CODE", "STATE.NAME", "OLD", "CUR")
     
   } else if (level == "dl") {
     

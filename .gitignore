@@ -12,8 +12,10 @@
 *.docx
 *.pptx
 
-# folders in repo
-
+# files and folders
+data/Ecoregions2017/
+data/Ecoregions2017_reclassification.csv
+data/01_data-spatialise.RData # large file
 
 
 

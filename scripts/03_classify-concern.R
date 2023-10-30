@@ -138,6 +138,8 @@ if (!file.exists(path_class_prev)) {
     concern_class_upd <- read_xlsx(path_class_prev) %>% 
       {if (avoid_duplicate) {
         filter(., !(YEAR == currel_year & MONTH == currel_month_num)) # removing repeated rows
+      } else {
+        .
       }} %>%
       bind_rows(concern_class_cur) %>% 
       arrange(STATE.CODE, COUNTY.CODE, YEAR, MONTH) %>% 
