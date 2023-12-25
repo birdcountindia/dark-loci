@@ -47,6 +47,7 @@ if (!file.exists(path_thresh)) {
       {if (file.exists(path_class_prev)) {
         left_join(.,
                   read_xlsx(path_class_prev) %>% 
+                    distinct(COUNTY.CODE) %>% 
                     reframe(COUNTY.CODE = COUNTY.CODE,
                             ESSENTIAL2 = 1),
                   by = "COUNTY.CODE") %>% 
