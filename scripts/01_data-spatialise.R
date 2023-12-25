@@ -16,7 +16,7 @@ load(url("https://github.com/birdcountindia/ebird-datasets/raw/main/region_codes
 # joining mapvars --------------------------------------------------------
 
 load(slicedatapath)
-data_slice_G <- data_slice_G_filt
+# data_slice_G <- data_slice_G_filt
 
 tictoc::tic("Joining mapvars to each unique list")
 sf_use_s2(FALSE)

@@ -48,7 +48,7 @@ status_dl <- get_concern_summary(concern_fine, "dl", CONCERN.FINE)
 write_xlsx(x = list("Country" = status_nat,
                     "States" = status_state,
                     "Dark clusters" = status_dl),
-           path = glue("outputs/status_{get_rel_str(verbose = FALSE)}.xlsx"))
+           path = glue("outputs/{currel_year}/status_{get_rel_str(verbose = FALSE)}.xlsx"))
 
 
 # current status plots ------------------------------------------------------------
@@ -122,7 +122,7 @@ plot1 <- ((plot1_base +
                              name = "Concern level"))) 
 
 ggsave(plot1, 
-       filename = glue("outputs/status_{get_rel_str(verbose = FALSE)}.png"),
+       filename = glue("outputs/{currel_year}/status_{get_rel_str(verbose = FALSE)}.png"),
        dpi = 300, width = 24, height = 24, units = "in")  
 
 
@@ -158,7 +158,7 @@ plot2 <- (plot2_base +
                           name = "Prop. of concern 3\ndistricts"))
 
 ggsave(plot2, 
-       filename = glue("outputs/propconcern_st_{get_rel_str(verbose = FALSE)}.png"),
+       filename = glue("outputs/{currel_year}/propconcern_st_{get_rel_str(verbose = FALSE)}.png"),
        dpi = 300, width = 36, height = 14, units = "in")  
 
 
@@ -187,7 +187,7 @@ plot3 <- ((status_dl %>%
   theme(plot.title = element_text(size = 24, hjust = 0.5))
 
 ggsave(plot3, 
-       filename = glue("outputs/propconcern_dl_{get_rel_str(verbose = FALSE)}.png"),
+       filename = glue("outputs/{currel_year}/propconcern_dl_{get_rel_str(verbose = FALSE)}.png"),
        dpi = 300, width = 36, height = 14, units = "in")  
 
 
@@ -276,6 +276,8 @@ if (!file.exists(path_metric_full_prev) & !file.exists(path_metric_track_prev)) 
     metric_nat_upd <- metric_nat_data %>% 
       {if (avoid_duplicate) {
         filter(., !(YEAR == currel_year & MONTH == currel_month_num)) # removing repeated rows
+      } else {
+        .
       }} %>%
       bind_rows(metric_nat_cur) %>% 
       arrange(YEAR, MONTH)
@@ -283,6 +285,8 @@ if (!file.exists(path_metric_full_prev) & !file.exists(path_metric_track_prev)) 
     metric_state_upd <- metric_state_data %>% 
       {if (avoid_duplicate) {
         filter(., !(YEAR == currel_year & MONTH == currel_month_num)) # removing repeated rows
+      } else {
+        .
       }} %>%
       bind_rows(metric_state_cur) %>% 
       arrange(STATE.CODE, STATE, YEAR, MONTH)
@@ -290,6 +294,8 @@ if (!file.exists(path_metric_full_prev) & !file.exists(path_metric_track_prev)) 
     metric_dl_upd <- metric_dl_data %>% 
       {if (avoid_duplicate) {
         filter(., !(YEAR == currel_year & MONTH == currel_month_num)) # removing repeated rows
+      } else {
+        .
       }} %>%
       bind_rows(metric_dl_cur) %>% 
       arrange(DL.NAME, YEAR, MONTH)

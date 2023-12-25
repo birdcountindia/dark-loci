@@ -85,7 +85,55 @@ get_stage_obj_path <- function(folder, stage, substage = NULL,
     stage_translation <- glue("{stage_translation}_{get_rel_str(months_lag, verbose = FALSE)}")
   }
   
-  return(glue("{folder}/{stage_translation}{filetype}"))
+  if (folder == "outputs") {
+    return(glue("{folder}/{currel_year}/{stage_translation}{filetype}"))
+  } else {
+    return(glue("{folder}/{stage_translation}{filetype}"))
+  }
+  
+}
+
+
+# tracking cycle functions ---------------------------------------------------
+
+# get start and end dates for current tracking cycle
+
+get_track_dates <- function(cur_ebd_rel) {
+  
+  # these dates are EBD release dates (not real-time year and month)
+  
+  track_cycles <- data.frame(
+    START = seq(as_date("2023-02-01"), length.out = 10, by = "years"),
+    END = seq(as_date("2024-01-01"), length.out = 10, by = "years"),
+    CYCLE = 1:10
+  ) %>% 
+    mutate(CUR = case_when(cur_ebd_rel >= START & cur_ebd_rel <= END ~ TRUE,
+                           TRUE ~ FALSE))
+  
+  return(track_cycles %>% filter(CUR == TRUE) %>% dplyr::select(-CUR))
+  
+}
+
+
+# get the concern classification data for the first month of current track cycle
+
+get_concern_class_start <- function(cur_date = date_currel) {
+  
+  # first of current track cycle
+  t1 <- cur_date %>% 
+    get_track_dates() %>% 
+    pull(START)
+  
+  t2 <- cur_date
+  
+  # number of months difference
+  dt <- interval(t1, t2) %/% months(1)
+  
+  concern_class0 <- get_stage_obj_path("outputs", "class", add_rel_str = TRUE,
+                                       months_lag = dt) %>% 
+    read_xlsx()
+  
+  return(concern_class0)
   
 }
 
@@ -354,23 +402,5 @@ classify_concern <- function(data, which_concern = NULL, get_thresh_noconcern = 
     return(classified)
     
   }
-  
-}
-
-# get start and end dates for current tracking cycle --------------------------------
-
-get_track_dates <- function(cur_ebd_rel) {
-  
-  # these dates are EBD release dates (not real-time year and month)
-  
-  track_cycles <- data.frame(
-    START = seq(as_date("2023-02-01"), length.out = 10, by = "years"),
-    END = seq(as_date("2024-01-01"), length.out = 10, by = "years"),
-    CYCLE = 1:10
-  ) %>% 
-    mutate(CUR = case_when(cur_ebd_rel >= START & cur_ebd_rel <= END ~ TRUE,
-                           TRUE ~ FALSE))
-  
-  return(track_cycles %>% filter(CUR == TRUE) %>% dplyr::select(-CUR))
   
 }

@@ -1,11 +1,16 @@
 # automated parameters
 
-get_param(date_currel = "2023-04-01")
+get_param(date_currel = "2023-11-01")
 
 
-# maindatapath <-  glue("../ebird-datasets/EBD/ebd_IN_rel{currel_month_lab}-{currel_year}.RData")
-# slicedatapath <-  glue("../ebird-datasets/EBD/ebd_IN_rel{currel_month_lab}-{currel_year}_slice.RData")
+maindatapath <-  glue("../ebird-datasets/EBD/ebd_IN_rel{currel_month_lab}-{currel_year}.RData")
+slicedatapath <-  glue("../ebird-datasets/EBD/ebd_IN_rel{currel_month_lab}-{currel_year}_slice.RData")
 
-# test data
-maindatapath <-  glue("ebd_IN_rel{currel_month_lab}-{currel_year}.RData")
-slicedatapath <-  glue("ebd_IN_rel{currel_month_lab}-{currel_year}_slice.RData")
+# # test data
+# maindatapath <-  glue("ebd_IN_rel{currel_month_lab}-{currel_year}.RData")
+# slicedatapath <-  glue("ebd_IN_rel{currel_month_lab}-{currel_year}_slice.RData")
+
+# subfolder for monthly outputs
+if (!dir.exists(glue("outputs/{currel_year}"))) {
+  dir.create(glue("outputs/{currel_year}"), recursive = TRUE)
+}

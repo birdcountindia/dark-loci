@@ -1,14 +1,13 @@
 # northeast
 darkloci1 <- data.frame(STATE = c("Arunachal Pradesh", "Meghalaya", "Tripura",
-                                      "Assam", 
-                                      "Nagaland", "Manipur", "Mizoram"),
-                       # when was it identified as a dark locus?
-                       ID.DATE = "2022-03-01" %>% as_date(),
-                       # when was roadshow or other action executed? (end date)
-                       ACTION.DATE = c(rep("2022-06-07", 4), 
-                                       rep("2023-01-31", 3)) %>% 
-                         as_date() %>% 
-                         floor_date("months")) %>% 
+                                  "Assam", 
+                                  "Nagaland", "Manipur", "Mizoram"),
+                        # when was it identified as a dark locus?
+                        ID.DATE = "2022-03-01" %>% as_date(),
+                        # when was roadshow or other action executed? (end date)
+                        ACTION.DATE = c(rep("2022-06-07", 4), rep("2023-01-31", 3)) %>% 
+                          as_date() %>% 
+                          floor_date("months")) %>% 
   left_join(admin_unit_mapping, by = "STATE")
 
 # magadha

@@ -19,7 +19,7 @@ source("scripts/00_params.R")
 
 # main data
 load(maindatapath)
-data <- data_filt
+# data <- data_filt
 
 
 # spatialising data (add mapvars) ------------------------------------------------------
