@@ -35,7 +35,8 @@ if (!file.exists(path_thresh)) {
     temp0 <- data_invcomp %>% 
       # reordering columns
       dplyr::select(STATE.CODE, STATE, COUNTY.CODE, COUNTY, 
-                    SPEC.OBS.DIST, SPEC.EXP.DIST, SPEC.EXP, LISTS.DIST, INV.C) %>% 
+                    SPEC.OBS.DIST, SPEC.EXP.DIST, SPEC.EXP.ECO, 
+                    SPEC.EXP, LISTS.DIST, INV.C) %>% 
       # need to retain districts with >= 75% completeness if they were <75% when 
       # current track cycle started, or in previous month out of nowhere
       left_join(get_concern_class_start(date_currel) %>% 
@@ -132,7 +133,8 @@ concern_class_cur <- temp0 %>%
   # saving as year-month combo of EBD release (instead of real-time year-month)
   mutate(YEAR = currel_year, MONTH = currel_month_num) %>% 
   relocate(STATE.CODE, COUNTY.CODE, STATE, COUNTY, LISTS.DIST, 
-           YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, SPEC.OBS.DIST, SPEC.EXP.DIST, SPEC.EXP, INV.C)
+           YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, 
+           SPEC.OBS.DIST, SPEC.EXP.DIST, SPEC.EXP.ECO, SPEC.EXP, INV.C)
 
 # not removing low concern category because this will be history of concern, so good to keep
 # they will be removed in the metrics to be tracked
@@ -170,7 +172,8 @@ if (!file.exists(path_class_prev)) {
       bind_rows(concern_class_cur) %>% 
       arrange(STATE.CODE, COUNTY.CODE, YEAR, MONTH) %>% 
       relocate(STATE.CODE, COUNTY.CODE, STATE, COUNTY, LISTS.DIST, 
-               YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, SPEC.OBS.DIST, SPEC.EXP.DIST, SPEC.EXP, INV.C) %>% 
+               YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, 
+               SPEC.OBS.DIST, SPEC.EXP.DIST, SPEC.EXP.ECO, SPEC.EXP, INV.C) %>% 
       complete(nesting(STATE.CODE, COUNTY.CODE, STATE, COUNTY),
                YEAR, MONTH)
     

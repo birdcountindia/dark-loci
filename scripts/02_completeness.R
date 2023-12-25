@@ -119,7 +119,7 @@ district_exp <- data_ecoreg %>%
   full_join(ecoregion_exp) %>% 
   replace_na(list(LISTS.DIST = 0, SPEC.OBS.DIST = 0, SPEC.EXP.DIST = 0)) %>% 
   # calculating SPEC.EXP for district based on existing lists AND on SPEC.EXP of ecoregion
-  mutate(SPEC.EXP = floor((SPEC.EXP.DIST + SPEC.EXP.ECO)/2))
+  mutate(SPEC.EXP = floor((2*SPEC.EXP.DIST + 1*SPEC.EXP.ECO)/(2 + 1)))
 
 
 # calculating inventory completeness --------------------------------------
