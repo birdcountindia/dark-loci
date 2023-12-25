@@ -66,7 +66,7 @@ darkloci2 <- tribble(
   # ignoring Chatra, Garhwa, Giridih, Hazaribagh, Kodarma, Palamu, Singrauli this time
 ) %>% 
   mutate(ID.DATE = "2023-04-01" %>% as_date(),
-         ACTION.DATE = NA) %>% 
+         ACTION.DATE = "2023-09-01" %>% as_date() %>% floor_date("months")) %>% 
   left_join(admin_unit_mapping, by = c("STATE", "COUNTY"))
 
 #
