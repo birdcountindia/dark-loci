@@ -1,6 +1,6 @@
 # automated parameters
 
-get_param(date_currel = "2023-02-01")
+get_param(date_currel = "2023-11-01")
 
 
 maindatapath <-  glue("../ebird-datasets/EBD/ebd_IN_rel{currel_month_lab}-{currel_year}.RData")

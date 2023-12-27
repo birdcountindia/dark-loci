@@ -473,7 +473,11 @@ get_metrics_gsheet <- function(which_level) {
     metrics <- metrics %>% 
       dplyr::select(-MoM) %>% 
       pivot_wider(names_from = "MONTH.LAB", values_from = "CONCERN.HIGH") %>% 
-      mutate(MoM = metrics %>% filter(!is.na(MoM)) %>% pull(MoM)) %>% 
+      mutate(MoM = if (!all(is.na(metrics$MoM))) {
+        metrics %>% filter(!is.na(MoM)) %>% pull(MoM)
+      } else {
+        NA
+      }) %>% 
       dplyr::select(-METRIC)
 
   } else if (which_level == "ST") {
