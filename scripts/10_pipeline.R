@@ -19,7 +19,7 @@ source("scripts/00_params.R")
 
 # main data
 load(maindatapath)
-data <- data_filt
+# data <- data_filt
 
 
 # spatialising data (add mapvars) ------------------------------------------------------
@@ -69,3 +69,8 @@ source("scripts/04_id-loci.R")
 # metric summaries to track and monitor ---------------------------------------------
 
 source("scripts/05_track-metrics.R")
+
+
+# update BCI metrics GSheet -----------------------------------------------
+
+source("scripts/06_update-gsheet.R")

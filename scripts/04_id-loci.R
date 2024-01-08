@@ -1,14 +1,13 @@
 # northeast
 darkloci1 <- data.frame(STATE = c("Arunachal Pradesh", "Meghalaya", "Tripura",
-                                      "Assam", 
-                                      "Nagaland", "Manipur", "Mizoram"),
-                       # when was it identified as a dark locus?
-                       ID.DATE = "2022-03-01" %>% as_date(),
-                       # when was roadshow or other action executed? (end date)
-                       ACTION.DATE = c(rep("2022-06-07", 4), 
-                                       rep("2023-01-31", 3)) %>% 
-                         as_date() %>% 
-                         floor_date("months")) %>% 
+                                  "Assam", 
+                                  "Nagaland", "Manipur", "Mizoram"),
+                        # when was it identified as a dark locus?
+                        ID.DATE = "2022-03-01" %>% as_date(),
+                        # when was roadshow or other action executed? (end date)
+                        ACTION.DATE = c(rep("2022-06-07", 4), rep("2023-01-31", 3)) %>% 
+                          as_date() %>% 
+                          floor_date("months")) %>% 
   left_join(admin_unit_mapping, by = "STATE")
 
 # magadha
@@ -67,6 +66,40 @@ darkloci2 <- tribble(
   # ignoring Chatra, Garhwa, Giridih, Hazaribagh, Kodarma, Palamu, Singrauli this time
 ) %>% 
   mutate(ID.DATE = "2023-04-01" %>% as_date(),
+         ACTION.DATE = "2023-09-01" %>% as_date() %>% floor_date("months")) %>% 
+  left_join(admin_unit_mapping, by = c("STATE", "COUNTY"))
+
+# dl3
+darkloci3 <- tribble(
+  ~ STATE, ~ COUNTY,
+  "Haryana", "Ambala",
+  "Haryana", "Fatehabad",
+  "Haryana", "Hisar",
+  "Haryana", "Jind",
+  "Haryana", "Kaithal",
+  "Haryana", "Karnal",
+  "Haryana", "Kurukshetra",
+  "Haryana", "Panipat",
+  "Haryana", "Sirsa",
+  "Haryana", "Yamunanagar",
+  "Punjab", "Barnala",
+  "Punjab", "Bathinda",
+  "Punjab", "Faridkot",
+  "Punjab", "Fatehgarh Sahib",
+  "Punjab", "Fazilka",
+  "Punjab", "Mansa",
+  "Punjab", "Moga",
+  "Punjab", "Patiala",
+  "Punjab", "Sangrur",
+  "Punjab", "Sri Muktsar Sahib",
+  "Rajasthan", "Sri Ganganagar",
+  "Rajasthan", "Hanumangarh",
+  "Uttar Pradesh", "Baghpat",
+  "Uttar Pradesh", "Muzaffarnagar",
+  "Uttar Pradesh", "Saharanpur",
+  "Uttar Pradesh", "Shamli"
+) %>% 
+  mutate(ID.DATE = "2023-12-01" %>% as_date(),
          ACTION.DATE = NA) %>% 
   left_join(admin_unit_mapping, by = c("STATE", "COUNTY"))
 
@@ -82,22 +115,32 @@ darkloci2 <- dists_sf %>%
   mutate(DL.NO = 2,
          DL.NAME = "Magadha")
 
+darkloci3 <- dists_sf %>% 
+  right_join(darkloci3, by = c("STATE.NAME", "DISTRICT.NAME")) %>% 
+  mutate(DL.NO = 3,
+         DL.NAME = "Northwest")
+
+
 darkloci <- bind_rows(darkloci1, darkloci2) %>% 
+  # darkloci <- bind_rows(darkloci1, darkloci2, darkloci3) %>% 
   st_drop_geometry() %>% 
   mutate(AREA = NULL)
 
 darkloci_sf <- bind_rows(darkloci1, darkloci2) %>% 
+  # darkloci_sf <- bind_rows(darkloci1, darkloci2, darkloci3) %>% 
   group_by(DL.NO, DL.NAME) %>% 
   summarise()
 
 # # to check outline
-# ggplot(dists_sf) + 
+# ggplot(dists_sf) +
 #   geom_sf() +
 #   # dl boundaries
 #   geom_sf(data = darkloci_sf, aes(geometry = DISTRICT.GEOM, col = DL.NAME), fill = NA, colour = "red")
 
 
 # writing
-save(darkloci1, darkloci2, darkloci, darkloci_sf,
+save(darkloci1, darkloci2, 
+     # darkloci3, 
+     darkloci, darkloci_sf,
      file = get_stage_obj_path("data", "id"))
 

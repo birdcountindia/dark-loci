@@ -35,9 +35,36 @@ if (!file.exists(path_thresh)) {
     temp0 <- data_invcomp %>% 
       # reordering columns
       dplyr::select(STATE.CODE, STATE, COUNTY.CODE, COUNTY, 
-                    SPEC.OBS.DIST, SPEC.EXP.DIST, SPEC.EXP, LISTS.DIST, INV.C) %>% 
+                    SPEC.OBS.DIST, SPEC.EXP.DIST, SPEC.EXP.ECO, 
+                    SPEC.EXP, LISTS.DIST, INV.C) %>% 
+      # need to retain districts with >= 75% completeness if they were <75% when 
+      # current track cycle started, or in previous month out of nowhere
+      left_join(get_concern_class_start(date_currel) %>% 
+                  reframe(COUNTY.CODE = COUNTY.CODE,
+                          ESSENTIAL1 = 1),
+                by = "COUNTY.CODE") %>% 
+      mutate(ESSENTIAL1 = replace_na(ESSENTIAL1, 0)) %>% 
+      # previous month (if some district crept in)
+      {if (file.exists(path_class_prev)) {
+        left_join(.,
+                  read_xlsx(path_class_prev) %>% 
+                    distinct(COUNTY.CODE) %>% 
+                    reframe(COUNTY.CODE = COUNTY.CODE,
+                            ESSENTIAL2 = 1),
+                  by = "COUNTY.CODE") %>% 
+          mutate(ESSENTIAL2 = replace_na(ESSENTIAL2, 0))
+      } else {
+        mutate(.,
+               ESSENTIAL2 = ESSENTIAL1)
+      }} %>% 
+      mutate(REMOVE = case_when(
+        ESSENTIAL1 != 1 & ESSENTIAL2 != 1 & 
+          (INV.C >= classify_concern(get_thresh_noconcern = TRUE)) ~ 1,
+        TRUE ~ 0
+      )) %>% 
       # removing districts with >=75% completeness cos they are of no concern
-      filter(!(INV.C >= classify_concern(get_thresh_noconcern = TRUE)))
+      filter(REMOVE != 1) %>% 
+      dplyr::select(-c(starts_with("ESSENTIAL"), REMOVE))
     
     
     # only create and use new thresholds if one year has passed
@@ -106,7 +133,8 @@ concern_class_cur <- temp0 %>%
   # saving as year-month combo of EBD release (instead of real-time year-month)
   mutate(YEAR = currel_year, MONTH = currel_month_num) %>% 
   relocate(STATE.CODE, COUNTY.CODE, STATE, COUNTY, LISTS.DIST, 
-           YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, SPEC.OBS.DIST, SPEC.EXP.DIST, SPEC.EXP, INV.C)
+           YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, 
+           SPEC.OBS.DIST, SPEC.EXP.DIST, SPEC.EXP.ECO, SPEC.EXP, INV.C)
 
 # not removing low concern category because this will be history of concern, so good to keep
 # they will be removed in the metrics to be tracked
@@ -123,8 +151,8 @@ if (!file.exists(path_class_prev)) {
   
   # need latest (month before current) classification for each district in the country
   concern_class_latest <- read_xlsx(path_class_prev) %>% 
-    group_by(pick(c(everything(), -MONTH))) %>% 
-    arrange(MONTH) %>% 
+    group_by(STATE.CODE, STATE, COUNTY.CODE, COUNTY) %>% 
+    arrange(YEAR, MONTH) %>% 
     slice_tail() %>% 
     ungroup()
   
@@ -144,7 +172,10 @@ if (!file.exists(path_class_prev)) {
       bind_rows(concern_class_cur) %>% 
       arrange(STATE.CODE, COUNTY.CODE, YEAR, MONTH) %>% 
       relocate(STATE.CODE, COUNTY.CODE, STATE, COUNTY, LISTS.DIST, 
-               YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, SPEC.OBS.DIST, SPEC.EXP.DIST, SPEC.EXP, INV.C)
+               YEAR, MONTH, CONCERN.FINE, CONCERN.COARSE, 
+               SPEC.OBS.DIST, SPEC.EXP.DIST, SPEC.EXP.ECO, SPEC.EXP, INV.C) %>% 
+      complete(nesting(STATE.CODE, COUNTY.CODE, STATE, COUNTY),
+               YEAR, MONTH)
     
 }
 

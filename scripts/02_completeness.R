@@ -43,14 +43,15 @@ data_ecoreg <- data %>%
   left_join(data_ecoreg_sf %>% 
               st_drop_geometry() %>% 
               dplyr::select(SAMPLING.EVENT.IDENTIFIER, ECOREGION),
-            by = "SAMPLING.EVENT.IDENTIFIER")
+            by = "SAMPLING.EVENT.IDENTIFIER", 
+            relationship = "many-to-many") # some SEI have 2 GROUP.IDs
 
 
 # linking districts to ecoregions
 # our primary analysis focus is on districts in EBD, so avoiding using names from dists_sf
 eco_dist_link <- data_ecoreg %>% 
   distinct(STATE.CODE, STATE, COUNTY.CODE, COUNTY, ECOREGION) %>% 
-  filter(!is.na(COUNTY) & !is.na(COUNTY.CODE))
+  filter(!is.na(COUNTY) & !is.na(COUNTY.CODE) & !is.na(ECOREGION))
 
 
 # 1. SPEC.EXP for each ecoregion
@@ -81,6 +82,7 @@ ecoregion_exp <- data_ecoreg %>%
   # ecoregions per district
   right_join(eco_dist_link) %>% 
   group_by(STATE.CODE, STATE, COUNTY.CODE, COUNTY) %>% 
+  # when district has multiple ecoregions, averaging across them
   summarise(SPEC.EXP.ECO = floor(mean(SPEC.EXP.ECO))) %>% 
   ungroup()
 
@@ -117,7 +119,7 @@ district_exp <- data_ecoreg %>%
   full_join(ecoregion_exp) %>% 
   replace_na(list(LISTS.DIST = 0, SPEC.OBS.DIST = 0, SPEC.EXP.DIST = 0)) %>% 
   # calculating SPEC.EXP for district based on existing lists AND on SPEC.EXP of ecoregion
-  mutate(SPEC.EXP = floor((SPEC.EXP.DIST + SPEC.EXP.ECO)/2))
+  mutate(SPEC.EXP = floor((2*SPEC.EXP.DIST + 1*SPEC.EXP.ECO)/(2 + 1)))
 
 
 # calculating inventory completeness --------------------------------------
