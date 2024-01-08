@@ -1,3 +1,59 @@
+# create HTML map of DL boundaries and districts ------------------------------------
+
+darkloci_HTML_map <- function(darkloci_dists) {
+  
+  require(mapview)
+  require(rmapshaper)
+
+  dists_sf <- dists_sf %>% 
+    mutate(DISTRICT.NAME = case_when(DISTRICT.NAME == "Sipahijala" ~ "Sepahijala",
+                                  TRUE ~ DISTRICT.NAME)) %>% 
+    left_join(admin_unit_mapping, by = c("STATE.NAME", "DISTRICT.NAME")) %>% 
+    dplyr::select(-c(AREA, STATE.NAME, DISTRICT.NAME, STATE.CODE)) %>% 
+    # simplifying the spatial features
+    rmapshaper::ms_simplify(keep = 0.03, keep_shapes = FALSE)
+  
+  data0 <- darkloci_dists %>% 
+    dplyr::select(DL.NO, DL.NAME, ID.DATE, ACTION.DATE, COUNTY.CODE, STATE, COUNTY)
+  
+  data1 <- data0 %>% 
+    left_join(dists_sf, by = c("COUNTY.CODE", "STATE", "COUNTY")) %>% 
+    st_as_sf() %>% 
+    # # simplifying the spatial features
+    # rmapshaper::ms_simplify(keep = 0.03, keep_shapes = FALSE) %>% 
+    arrange(DL.NO) %>% 
+    mutate(DL.NAME = fct_inorder(DL.NAME))
+
+  
+  mapviewOptions(fgb = FALSE)
+  map0 <- mapView(data1, 
+                  color = "white",
+                  zcol = c("DL.NAME"), 
+                  map.types = c("Esri.WorldImagery"),
+                  layer.name = c("Dark loci clusters"), 
+                  popup = leafpop::popupTable(data1,
+                                              zcol = c("DL.NAME", "ACTION.DATE", 
+                                                       "COUNTY.CODE", "STATE", "COUNTY"), 
+                                              feature.id = FALSE,
+                                              row.numbers = FALSE),
+                  alpha.regions = 0.6) +
+    mapView(dists_sf, color = "white", fill = NA, layer.name = c("Districts of India"),
+            popup = leafpop::popupTable(dists_sf,
+                                        zcol = c("COUNTY.CODE", "STATE", "COUNTY"), 
+                                        feature.id = FALSE,
+                                        row.numbers = FALSE), 
+            highlight = FALSE, legend = FALSE, label = NA, alpha.regions = 0)
+
+  # webshot::install_phantomjs()
+  mapshot(map0, 
+          url = "outputs/darkloci_map.html")
+  
+}
+
+# dist popup
+# factor order DL
+
+
 # get relMON-YYYY or rel-YYYYMM string -----------------------------------------------------
 
 get_rel_str <- function(months_lag = 0, verbose = TRUE) {

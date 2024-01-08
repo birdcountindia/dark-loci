@@ -121,21 +121,17 @@ darkloci3 <- dists_sf %>%
          DL.NAME = "Northwest")
 
 
-darkloci <- bind_rows(darkloci1, darkloci2) %>% 
-  # darkloci <- bind_rows(darkloci1, darkloci2, darkloci3) %>% 
+darkloci <- bind_rows(darkloci1, darkloci2, darkloci3) %>%
   st_drop_geometry() %>% 
   mutate(AREA = NULL)
 
-darkloci_sf <- bind_rows(darkloci1, darkloci2) %>% 
-  # darkloci_sf <- bind_rows(darkloci1, darkloci2, darkloci3) %>% 
+darkloci_sf <- bind_rows(darkloci1, darkloci2, darkloci3) %>%
   group_by(DL.NO, DL.NAME) %>% 
   summarise()
 
-# # to check outline
-# ggplot(dists_sf) +
-#   geom_sf() +
-#   # dl boundaries
-#   geom_sf(data = darkloci_sf, aes(geometry = DISTRICT.GEOM, col = DL.NAME), fill = NA, colour = "red")
+
+# create HTML map of dark loci clusters
+darkloci_HTML_map(darkloci)
 
 
 # writing
