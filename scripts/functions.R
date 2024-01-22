@@ -37,7 +37,8 @@ darkloci_HTML_map <- function(darkloci_dists) {
                                               feature.id = FALSE,
                                               row.numbers = FALSE),
                   alpha.regions = 0.6) +
-    mapView(dists_sf, color = "white", fill = NA, layer.name = c("Districts of India"),
+    mapView(dists_sf, color = "white", fill = "white", 
+            layer.name = c("Districts of India"),
             popup = leafpop::popupTable(dists_sf,
                                         zcol = c("COUNTY.CODE", "STATE", "COUNTY"), 
                                         feature.id = FALSE,
