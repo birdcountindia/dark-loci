@@ -505,37 +505,49 @@ get_metrics_gsheet <- function(which_level) {
     data2 <- map2(iterate$PATHS, iterate$MONTH.LAB, ~ {
       if (file.exists(.x)) {
         read_xlsx(.x, "Dark clusters") %>% 
-          mutate(METRIC = factor(DL.NAME, levels = c("Northeast", "Magadha"))) %>% 
+          mutate(METRIC = factor(DL.NAME, 
+                                 levels = c("Northeast", "Magadha", "Northwest"))) %>% 
           arrange(METRIC) %>% 
           dplyr::select(-DL.NAME) %>% 
           bind_cols(tibble(MONTH.LAB = .y))
       } else {
-        data.frame(CONCERN.HIGH = rep(NA, 2),
-                   MoM = rep(NA, 2),
-                   METRIC = factor(c("Northeast", "Magadha"), 
-                                   levels = c("Northeast", "Magadha"))) %>% 
+        data.frame(CONCERN.HIGH = rep(NA, 3),
+                   MoM = rep(NA, 3),
+                   METRIC = factor(c("Northeast", "Magadha", "Northwest"), 
+                                   levels = c("Northeast", "Magadha", "Northwest"))) %>% 
           bind_cols(tibble(MONTH.LAB = .y))
       }}) %>% 
       list_rbind()
     
     metrics <- data1 %>% 
       bind_rows(data2) %>% 
-      mutate(METRIC = factor(METRIC, levels = c("Country", "Northeast", "Magadha"))) %>% 
+      mutate(METRIC = factor(METRIC, 
+                             levels = c("Country", "Northeast", "Magadha", "Northwest"))) %>% 
       left_join(iterate %>% distinct(DATE, MONTH.LAB)) %>% 
       arrange(DATE) %>% 
       mutate(MoM = case_when(MONTH.LAB == currel_month_lab ~ MoM,
                              TRUE ~ NA)) %>% 
       dplyr::select(METRIC, MONTH.LAB, CONCERN.HIGH, MoM)
     
+    # calculate MoM only for latest month, and only for DL with values for prev. month
+    metrics <- metrics %>% 
+      group_by(METRIC) %>% 
+      mutate(MoM.FILT = case_when(is.na(MoM) ~ 1,
+                                  TRUE ~ 0)) %>% 
+      # newly added DL will appear in corresp. month, but will have no MoM unlike older ones
+      mutate(MoM.FILT = case_when(all(MoM.FILT == 1) ~ 0.5,
+                             TRUE ~ MoM.FILT),
+             MoM = case_when(MoM.FILT == 0.5 ~ NA,
+                             TRUE ~ MoM)) %>% 
+      filter(!all(MoM.FILT == 1)) %>% 
+      dplyr::select(-MoM.FILT) %>% 
+      ungroup()
+    
     metrics <- metrics %>% 
       dplyr::select(-MoM) %>% 
       pivot_wider(names_from = "MONTH.LAB", values_from = "CONCERN.HIGH") %>% 
-      mutate(MoM = if (!all(is.na(metrics$MoM))) {
-        metrics %>% filter(!is.na(MoM)) %>% pull(MoM)
-      } else {
-        NA
-      }) %>% 
-      dplyr::select(-METRIC)
+      dplyr::select(-METRIC) %>% 
+      bind_cols(MoM = metrics %>% filter(!is.na(MoM)) %>% pull(MoM))
 
   } else if (which_level == "ST") {
     
@@ -612,7 +624,7 @@ write_metrics_sheet <- function(metric_data, which_level, darkloci = FALSE) {
     }
   } else if (darkloci == TRUE) {
     if (which_level == "IN") {
-      "B8:H10"
+      "B8:H11"
     } else if (which_level == "ST") {
       "K2:M33"
     }
