@@ -143,7 +143,8 @@ get_stage_obj_path <- function(folder, stage, substage = NULL,
   }
   
   if (folder == "outputs") {
-    return(glue("{folder}/{currel_year}/{stage_translation}{filetype}"))
+    year_folder <- (date_currel - months(months_lag)) %>% year()
+    return(glue("{folder}/{year_folder}/{stage_translation}{filetype}"))
   } else {
     return(glue("{folder}/{stage_translation}{filetype}"))
   }
