@@ -16,7 +16,11 @@ gs4_auth(email = "birdcountindia@ncf-india.org")
 # update gsheet ---------------------------------------------------------------
 
 get_metrics_gsheet("IN") %>% 
+  # reversing the sign so as to appear intuitively in metrics Google Sheet
+  mutate(MoM = -MoM) %>% 
   write_metrics_sheet("IN", darkloci = TRUE)
 
 get_metrics_gsheet("ST") %>% 
+  # reversing the sign so as to appear intuitively in metrics Google Sheet
+  mutate(MoM = -MoM) %>% 
   write_metrics_sheet("ST", darkloci = TRUE)
