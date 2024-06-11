@@ -26,23 +26,25 @@ darkloci_HTML_map <- function(darkloci_dists) {
 
   
   mapviewOptions(fgb = FALSE)
-  map0 <- mapView(data1, 
-                  color = "white",
-                  zcol = c("DL.NAME"), 
+  map0 <- mapView(dists_sf, color = "white", fill = "white", 
                   map.types = c("Esri.WorldImagery"),
-                  layer.name = c("Dark loci clusters"), 
-                  popup = leafpop::popupTable(data1,
-                                              zcol = c("DL.NAME", "ACTION.DATE", 
-                                                       "COUNTY.CODE", "STATE", "COUNTY"), 
+                  layer.name = c("Districts of India"),
+                  popup = leafpop::popupTable(dists_sf,
+                                              zcol = c("COUNTY.CODE", "STATE", "COUNTY"),
                                               feature.id = FALSE,
                                               row.numbers = FALSE),
-                  alpha.regions = 0.6) +
-    mapView(dists_sf, color = "white", fill = NA, layer.name = c("Districts of India"),
-            popup = leafpop::popupTable(dists_sf,
-                                        zcol = c("COUNTY.CODE", "STATE", "COUNTY"), 
+                  highlight = TRUE, legend = FALSE, label = NA, 
+                  alpha.regions = 0) +
+    mapView(data1, 
+            color = "white",
+            zcol = c("DL.NAME"), 
+            layer.name = c("Dark loci clusters"), 
+            popup = leafpop::popupTable(data1,
+                                        zcol = c("DL.NAME", "ACTION.DATE", 
+                                                 "COUNTY.CODE", "STATE", "COUNTY"), 
                                         feature.id = FALSE,
-                                        row.numbers = FALSE), 
-            highlight = FALSE, legend = FALSE, label = NA, alpha.regions = 0)
+                                        row.numbers = FALSE),
+            alpha.regions = 0.6)
 
   # webshot::install_phantomjs()
   mapshot(map0, 

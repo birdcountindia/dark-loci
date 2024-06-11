@@ -1,3 +1,5 @@
+# load("data/admin_units.RData")
+
 # northeast
 darkloci1 <- data.frame(STATE = c("Arunachal Pradesh", "Meghalaya", "Tripura",
                                   "Assam", 
@@ -69,7 +71,7 @@ darkloci2 <- tribble(
          ACTION.DATE = "2023-09-01" %>% as_date() %>% floor_date("months")) %>% 
   left_join(admin_unit_mapping, by = c("STATE", "COUNTY"))
 
-# dl3
+# Ghaggar
 darkloci3 <- tribble(
   ~ STATE, ~ COUNTY,
   "Haryana", "Ambala",
@@ -91,13 +93,7 @@ darkloci3 <- tribble(
   "Punjab", "Moga",
   "Punjab", "Patiala",
   "Punjab", "Sangrur",
-  "Punjab", "Sri Muktsar Sahib",
-  "Rajasthan", "Sri Ganganagar",
-  "Rajasthan", "Hanumangarh",
-  "Uttar Pradesh", "Baghpat",
-  "Uttar Pradesh", "Muzaffarnagar",
-  "Uttar Pradesh", "Saharanpur",
-  "Uttar Pradesh", "Shamli"
+  "Punjab", "Sri Muktsar Sahib"
 ) %>% 
   mutate(ID.DATE = "2023-12-01" %>% as_date(),
          ACTION.DATE = NA) %>% 
@@ -118,7 +114,7 @@ darkloci2 <- dists_sf %>%
 darkloci3 <- dists_sf %>% 
   right_join(darkloci3, by = c("STATE.NAME", "DISTRICT.NAME")) %>% 
   mutate(DL.NO = 3,
-         DL.NAME = "Northwest")
+         DL.NAME = "Ghaggar")
 
 
 darkloci <- bind_rows(darkloci1, darkloci2, darkloci3) %>%
@@ -132,6 +128,8 @@ darkloci_sf <- bind_rows(darkloci1, darkloci2, darkloci3) %>%
 
 # create HTML map of dark loci clusters
 darkloci_HTML_map(darkloci)
+# darkloci_HTML_map(darkloci %>%
+#                     filter(DL.NO == 3))
 
 
 # writing
