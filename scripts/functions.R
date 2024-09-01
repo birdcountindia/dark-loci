@@ -507,16 +507,17 @@ get_metrics_gsheet <- function(which_level) {
     data2 <- map2(iterate$PATHS, iterate$MONTH.LAB, ~ {
       if (file.exists(.x)) {
         read_xlsx(.x, "Dark clusters") %>% 
+          mutate(DL.NAME = ifelse(DL.NAME == "Northwest", "Ghaggar", DL.NAME)) %>% 
           mutate(METRIC = factor(DL.NAME, 
-                                 levels = c("Northeast", "Magadha", "Northwest"))) %>% 
+                                 levels = c("Northeast", "Magadha", "Ghaggar"))) %>% 
           arrange(METRIC) %>% 
           dplyr::select(-DL.NAME) %>% 
           bind_cols(tibble(MONTH.LAB = .y))
       } else {
         data.frame(CONCERN.HIGH = rep(NA, 3),
                    MoM = rep(NA, 3),
-                   METRIC = factor(c("Northeast", "Magadha", "Northwest"), 
-                                   levels = c("Northeast", "Magadha", "Northwest"))) %>% 
+                   METRIC = factor(c("Northeast", "Magadha", "Ghaggar"), 
+                                   levels = c("Northeast", "Magadha", "Ghaggar"))) %>% 
           bind_cols(tibble(MONTH.LAB = .y))
       }}) %>% 
       list_rbind()
@@ -524,7 +525,7 @@ get_metrics_gsheet <- function(which_level) {
     metrics <- data1 %>% 
       bind_rows(data2) %>% 
       mutate(METRIC = factor(METRIC, 
-                             levels = c("Country", "Northeast", "Magadha", "Northwest"))) %>% 
+                             levels = c("Country", "Northeast", "Magadha", "Ghaggar"))) %>% 
       left_join(iterate %>% distinct(DATE, MONTH.LAB)) %>% 
       arrange(DATE) %>% 
       mutate(MoM = case_when(MONTH.LAB == currel_month_lab ~ MoM,
@@ -549,7 +550,10 @@ get_metrics_gsheet <- function(which_level) {
       dplyr::select(-MoM) %>% 
       pivot_wider(names_from = "MONTH.LAB", values_from = "CONCERN.HIGH") %>% 
       dplyr::select(-METRIC) %>% 
-      bind_cols(MoM = metrics %>% filter(!is.na(MoM)) %>% pull(MoM))
+      bind_cols(MoM = metrics %>% 
+                  filter(!is.na(MoM)) %>% 
+                  complete(METRIC = unique(metrics$METRIC)) %>%
+                  pull(MoM))
 
   } else if (which_level == "ST") {
     
@@ -598,15 +602,17 @@ get_metrics_gsheet <- function(which_level) {
 
 # update gsheet ---------------------------------------------------------------
 
-write_metrics_sheet <- function(metric_data, which_level, darkloci = FALSE) {
+write_metrics_sheet <- function(metric_data, which_level, darkloci = TRUE) {
+  
+  if (darkloci == FALSE) {
+    stop("This repository is only for dark loci. For other BCI metrics, run ebird-datasets first.")
+  }
   
   if (!which_level %in% c("IN", "ST", "DT")) {
     stop('Please choose one of {"IN", "ST", "DT"} for which_level.')
   } else {
-    if (darkloci == TRUE) {
-      if (which_level == "DT") {
-        stop('"DT" level not defined for dark loci metrics.')
-      }
+    if (which_level == "DT") {
+      stop('"DT" level not defined for dark loci metrics.')
     }
   }
   
@@ -616,46 +622,20 @@ write_metrics_sheet <- function(metric_data, which_level, darkloci = FALSE) {
   sheet_name_cur <- glue("{sheet_prefix_cur}-{sheet_suffix}")
   
   # range of cells in GSheet to write to, based on which metric
-  sheet_range <- if (darkloci == FALSE) {
-    if (which_level == "IN") {
-      "B1:H7"
-    } else if (which_level == "ST") {
-      "A2:J33"
-    } else if (which_level == "DT") {
-      "A2:K731"
-    }
-  } else if (darkloci == TRUE) {
-    if (which_level == "IN") {
-      "B8:H11"
-    } else if (which_level == "ST") {
-      "K2:M33"
-    }
+  sheet_range <- if (which_level == "IN") {
+    "B8:H11"
+  } else if (which_level == "ST") {
+    "K2:M33"
   }
   
   
   if (!sheet_name_cur %in% (gs4_get(our_gsheet) %>% pluck("sheets", "name"))) {
     
-    if (darkloci == TRUE) {
-      
-      stop("Required sheet does not exist yet. Please run monthly BCI metrics before dark loci metrics.")
-      
-    } else {
-      
-      # first, create a copy of appropriate old sheet
-      # refer https://googlesheets4.tidyverse.org/reference/sheet_copy.html
-      
-      sheet_copy(from_ss = our_gsheet, .before = 1, # place as the first sheet
-                 from_sheet = sheet_name_prev, to_sheet = sheet_name_cur)
-      
-    }
-    
+    stop("Required sheet does not exist yet. Please run monthly BCI metrics before dark loci metrics.")
+
   } else {
-    
-    if (darkloci == TRUE) {
-      message("Writing dark loci metrics in sheet of interest.")
-    } else {
-      message(glue("Sheet of interest ({sheet_name_cur}) already exists. Rewriting range."))
-    }
+
+    message("Writing dark loci metrics in sheet of interest.")
 
   }
   
@@ -679,12 +659,5 @@ write_metrics_sheet <- function(metric_data, which_level, darkloci = FALSE) {
               # we need col names (months) to be updated
               col_names = if (!(darkloci == TRUE & which_level == "IN")) TRUE else FALSE, 
               reformat = FALSE) # we want to retain existing formatting (conditional colours for YoY%)
-  
-  # on IN sheet, BCI website stats needs to be cleared cos PJ brings in separately
-  if (which_level == "IN" & darkloci == FALSE) {
-    range_write(ss = our_gsheet, data = data.frame(matrix(NA, nrow = 3, ncol = 7)),
-                sheet = sheet_name_cur, range = "B11:H13", 
-                col_names = FALSE, reformat = FALSE) 
-  }
-  
+
 }
