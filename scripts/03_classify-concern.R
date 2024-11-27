@@ -21,12 +21,12 @@ if (!file.exists(path_thresh)) {
   thresh2_data <- read_xlsx(path_thresh, sheet = "COARSE") %>% 
     mutate(DATE = str_c(YEAR, str_pad(MONTH, 2, pad = "0"), "01", sep = "-") %>% as_date())
   
-  
-  thresh1_cur <- thresh1_data %>% slice_tail()
-  thresh2_cur <- thresh2_data %>% slice_tail()
+  # we want to continue to use original thresholds for meaningful tracking
+  thresh1_orig <- thresh1_data %>% slice_head()
+  thresh2_orig <- thresh2_data %>% slice_head()
   
   # to ensure both are on same page
-  if (thresh1_cur$DATE != thresh2_cur$DATE) {
+  if (thresh1_orig$DATE != thresh2_orig$DATE) {
     
     return("Date mismatch between threshold definitions of the two resolutions.")
     
@@ -39,11 +39,16 @@ if (!file.exists(path_thresh)) {
                     SPEC.EXP, LISTS.DIST, INV.C) %>% 
       # need to retain districts with >= 75% completeness if they were <75% when 
       # current track cycle started, or in previous month out of nowhere
-      left_join(get_concern_class_start(date_currel) %>% 
-                  reframe(COUNTY.CODE = COUNTY.CODE,
-                          ESSENTIAL1 = 1),
-                by = "COUNTY.CODE") %>% 
-      mutate(ESSENTIAL1 = replace_na(ESSENTIAL1, 0)) %>% 
+      {if (!(date_currel - get_track_dates(date_currel)$START < 27)) {
+        left_join(., 
+                  get_concern_class_start(date_currel) %>% 
+                    reframe(COUNTY.CODE = COUNTY.CODE,
+                            ESSENTIAL1 = 1),
+                  by = "COUNTY.CODE") %>% 
+          mutate(ESSENTIAL1 = replace_na(ESSENTIAL1, 0))
+      } else {
+        mutate(., ESSENTIAL1 = 0)
+      }} %>% 
       # previous month (if some district crept in)
       {if (file.exists(path_class_prev)) {
         left_join(.,
@@ -67,21 +72,22 @@ if (!file.exists(path_thresh)) {
       dplyr::select(-c(starts_with("ESSENTIAL"), REMOVE))
     
     
-    # only create and use new thresholds if one year has passed
+    # only create new thresholds if one year has passed
     
-    if (!(date_real - thresh1_cur$DATE >= 365)) {
+    if (!(date_currel - get_track_dates(date_currel)$START < 27)) {
 
       print("Using current threshold definitions.")
       
     } else {
       
       # since one year has passed, we define new thresholds
+      # (but we continue to use original thresholds for tracking purposes)
       
-      thresh_lev1 <- seq(1, n_distinct(temp0$DISTRICT.NAME), length.out = 6)[2:5] # we want 5 groups
-      thresh_lev2 <- seq(1, n_distinct(temp0$DISTRICT.NAME), length.out = 4)[2:3] # we want only 3 groups
+      thresh_lev1 <- seq(1, n_distinct(temp0$COUNTY.CODE), length.out = 6)[2:5] # we want 5 groups
+      thresh_lev2 <- seq(1, n_distinct(temp0$COUNTY.CODE), length.out = 4)[2:3] # we want only 3 groups
       
       # selecting thresholds based on unique values of completeness, dividing into 5 groups
-      thresh1_cur <- temp0 %>% 
+      thresh1_cur_new <- temp0 %>% 
         distinct(STATE.CODE, STATE, COUNTY.CODE, COUNTY, INV.C) %>% 
         dplyr::select(INV.C) %>% 
         arrange(INV.C) %>% 
@@ -91,9 +97,10 @@ if (!file.exists(path_thresh)) {
         pivot_wider(names_from = ROW, values_from = INV.C) %>% 
         magrittr::set_colnames(c("THRESH.FINE1", "THRESH.FINE2", "THRESH.FINE3", "THRESH.FINE4")) %>% 
         mutate(YEAR = real_year, MONTH = real_month_num) %>% 
-        relocate(YEAR, MONTH, THRESH.FINE1, THRESH.FINE2, THRESH.FINE3, THRESH.FINE4)
+        relocate(YEAR, MONTH, THRESH.FINE1, THRESH.FINE2, THRESH.FINE3, THRESH.FINE4) %>% 
+        mutate(DATE = date_real)
       
-      thresh2_cur <- temp0 %>% 
+      thresh2_cur_new <- temp0 %>% 
         distinct(STATE.CODE, STATE, COUNTY.CODE, COUNTY, INV.C) %>% 
         dplyr::select(INV.C) %>% 
         arrange(INV.C) %>% 
@@ -103,18 +110,17 @@ if (!file.exists(path_thresh)) {
         pivot_wider(names_from = ROW, values_from = INV.C) %>% 
         magrittr::set_colnames(c("THRESH.COARSE1", "THRESH.COARSE2")) %>% 
         mutate(YEAR = real_year, MONTH = real_month_num) %>% 
-        relocate(YEAR, MONTH, THRESH.COARSE1, THRESH.COARSE2)
+        relocate(YEAR, MONTH, THRESH.COARSE1, THRESH.COARSE2) %>% 
+        mutate(DATE = date_real)
       
       
       # writing updated threshold definitions to file
-      thresh1_data <- thresh1_data %>% bind_rows(thresh1_cur) %>% arrange(YEAR, MONTH)
-      thresh2_data <- thresh2_data %>% bind_rows(thresh2_cur) %>% arrange(YEAR, MONTH)
+      thresh1_data_new <- thresh1_data %>% bind_rows(thresh1_cur_new) %>% arrange(YEAR, MONTH)
+      thresh2_data_new <- thresh2_data %>% bind_rows(thresh2_cur_new) %>% arrange(YEAR, MONTH)
       
-      write_xlsx(x = list("FINE" = thresh1_data, "COARSE" = thresh2_data),
+      write_xlsx(x = list("FINE" = thresh1_data_new, "COARSE" = thresh2_data_new),
                  path = path_thresh)
-      
-      print("Using updated threshold definitions.")
-      
+
     }
   }
 }
@@ -124,8 +130,9 @@ if (!file.exists(path_thresh)) {
 
 concern_class_cur <- temp0 %>% 
   # adding columns of current year's thresholds
-  bind_cols(thresh1_cur %>% dplyr::select(-YEAR, -MONTH, -DATE)) %>% 
-  bind_cols(thresh2_cur %>% dplyr::select(-YEAR, -MONTH, -DATE)) %>% 
+  # we still use original thresholds in order for meaningful tracking
+  bind_cols(thresh1_orig %>% dplyr::select(-YEAR, -MONTH, -DATE)) %>% 
+  bind_cols(thresh2_orig %>% dplyr::select(-YEAR, -MONTH, -DATE)) %>% 
   classify_concern("fine") %>% 
   classify_concern("coarse") %>% 
   arrange(desc(CONCERN.FINE), INV.C, desc(LISTS.DIST), STATE.CODE, COUNTY.CODE) %>% 

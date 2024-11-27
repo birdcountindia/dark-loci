@@ -86,14 +86,14 @@ plot1_base <- concern_fine %>%
 plot1 <- ((plot1_base +
              geom_sf(aes(geometry = DISTRICT.GEOM, fill = INV.C)) +
              # DL outline
-             geom_sf(data = darkloci_sf %>% filter(DL.NAME == "Magadha"),
+             geom_sf(data = darkloci_sf,
                      fill = NA, col = "limegreen", linewidth = 0.9) +
              scale_fill_viridis_c(option = "inferno", 
                                   name = "Inventory (species)\ncompleteness")) |
             (plot1_base +
                geom_sf(aes(geometry = DISTRICT.GEOM, fill = LISTS.DIST)) +
                # DL outline
-               geom_sf(data = darkloci_sf %>% filter(DL.NAME == "Magadha"),
+               geom_sf(data = darkloci_sf,
                        fill = NA, col = "limegreen", linewidth = 0.9) +
                scale_fill_viridis_b(option = "inferno", 
                                     breaks = n_bins$LISTS.DIST, 
@@ -102,7 +102,7 @@ plot1 <- ((plot1_base +
   ((plot1_base +
       geom_sf(aes(geometry = DISTRICT.GEOM, fill = as.factor(CONCERN.FINE))) +
       # DL outline
-      geom_sf(data = darkloci_sf %>% filter(DL.NAME == "Magadha"),
+      geom_sf(data = darkloci_sf,
               fill = NA, col = "limegreen", linewidth = 0.9) +
       scale_fill_viridis_d(option = "inferno", direction = -1,
                            name = "Concern level")) |
@@ -122,7 +122,7 @@ plot1 <- ((plot1_base +
               axis.title.x = element_blank(),
               axis.title.y = element_blank()) +
         geom_sf(aes(geometry = DISTRICT.GEOM, fill = as.factor(CONCERN.COARSE))) +
-        geom_sf(data = darkloci_sf %>% filter(DL.NAME == "Magadha"),
+        geom_sf(data = darkloci_sf,
                 fill = NA, col = "limegreen", linewidth = 0.9) +
         scale_fill_viridis_d(option = "inferno", direction = -1,
                              name = "Concern level"))) 
@@ -150,21 +150,21 @@ plot2_base <- status_state %>%
 plot2 <- (plot2_base +
             geom_sf(aes(geometry = STATE.GEOM, fill = CONCERN.5)) +
             # DL outline
-            geom_sf(data = darkloci_sf %>% filter(DL.NAME == "Magadha"),
+            geom_sf(data = darkloci_sf,
                     fill = NA, col = "limegreen", linewidth = 0.9) +
             scale_fill_viridis_c(option = "inferno", direction = -1,
                                  name = "Prop. of concern 5\ndistricts")) |
   (plot2_base +
      geom_sf(aes(geometry = STATE.GEOM, fill = CONCERN.4)) +
      # DL outline
-     geom_sf(data = darkloci_sf %>% filter(DL.NAME == "Magadha"),
+     geom_sf(data = darkloci_sf,
              fill = NA, col = "limegreen", linewidth = 0.9) +
      scale_fill_viridis_c(option = "inferno", direction = -1,
                           name = "Prop. of concern 4\ndistricts")) |
   (plot2_base +
      geom_sf(aes(geometry = STATE.GEOM, fill = CONCERN.3)) +
      # DL outline
-     geom_sf(data = darkloci_sf %>% filter(DL.NAME == "Magadha"),
+     geom_sf(data = darkloci_sf,
              fill = NA, col = "limegreen", linewidth = 0.9) +
      scale_fill_viridis_c(option = "inferno", direction = -1,
                           name = "Prop. of concern 3\ndistricts"))
@@ -175,25 +175,52 @@ ggsave(plot2,
 
 
 # proportions of concern districts per dark cluster
-plot3 <- ((status_dl %>% 
-             filter(DL.NAME == "Magadha") %>% 
-             left_join(darkloci2) %>% 
-             left_join(concern_class_cur %>% 
-                         distinct(STATE.CODE, STATE, COUNTY.CODE, COUNTY, CONCERN.FINE)) %>% 
+dl_cols = data.frame(
+  HEX = viridisLite::inferno(5, direction = -1),
+  CONCERN.FINE = 1:5
+)
+
+status_dl_full <- status_dl %>% 
+  left_join(darkloci, by = "DL.NAME") %>% 
+  left_join(dists_sf, by = c("STATE.NAME", "DISTRICT.NAME")) %>% 
+  left_join(concern_class_cur %>% 
+              distinct(STATE.CODE, STATE, COUNTY.CODE, COUNTY, CONCERN.FINE)) %>% 
+  left_join(dl_cols, by = "CONCERN.FINE") %>% 
+  mutate(CONCERN.FINE = factor(CONCERN.FINE, levels = 1:5))
+
+
+plot3 <- ((status_dl_full %>% 
+             filter(DL.NAME == "Ghaggar") %>% 
              ggplot() +
-             geom_sf(aes(geometry = DISTRICT.GEOM, fill = as.factor(CONCERN.FINE))) +
-             scale_fill_viridis_d(option = "inferno", direction = -1,
-                                  name = "Concern level", na.value = "grey80") +
-             labs(title = "Magadha")) |
-            (status_dl %>% 
-               filter(DL.NAME == "Northeast") %>% 
-               left_join(darkloci1) %>% 
-               left_join(concern_class_cur %>% 
-                           distinct(STATE.CODE, STATE, COUNTY.CODE, COUNTY, CONCERN.FINE)) %>% 
+             geom_sf(aes(geometry = DISTRICT.GEOM, fill = HEX)) +
+             scale_fill_identity(guide = "legend", name = "CONCERN.FINE", 
+                                 labels = status_dl_full %>% 
+                                   filter(DL.NAME == "Ghaggar") %>% 
+                                   distinct(CONCERN.FINE) %>% 
+                                   arrange(desc(CONCERN.FINE)) %>% 
+                                   pull(CONCERN.FINE)) +
+             labs(title = "Ghaggar")) |
+            (status_dl_full %>% 
+               filter(DL.NAME == "Magadha") %>% 
                ggplot() +
-               geom_sf(aes(geometry = DISTRICT.GEOM, fill = as.factor(CONCERN.FINE))) +
-               scale_fill_viridis_d(option = "inferno", direction = -1,
-                                    name = "Concern level", na.value = "grey80") +
+               geom_sf(aes(geometry = DISTRICT.GEOM, fill = HEX)) +
+               scale_fill_identity(guide = "legend", name = "CONCERN.FINE", 
+                                   labels = status_dl_full %>% 
+                                     filter(DL.NAME == "Magadha") %>% 
+                                     distinct(CONCERN.FINE) %>% 
+                                     arrange(desc(CONCERN.FINE)) %>% 
+                                     pull(CONCERN.FINE)) +
+             labs(title = "Magadha")) |
+            (status_dl_full %>% 
+               filter(DL.NAME == "Northeast") %>% 
+               ggplot() +
+               geom_sf(aes(geometry = DISTRICT.GEOM, fill = HEX)) +
+               scale_fill_identity(guide = "legend", name = "CONCERN.FINE", 
+                                   labels = status_dl_full %>% 
+                                     filter(DL.NAME == "Northeast") %>% 
+                                     distinct(CONCERN.FINE) %>% 
+                                     arrange(desc(CONCERN.FINE)) %>% 
+                                     pull(CONCERN.FINE)) +
                labs(title = "Northeast"))) &
   theme_classic() +
   theme(axis.line = element_blank(),
@@ -256,7 +283,8 @@ if (!file.exists(path_metric_full_prev) & !file.exists(path_metric_track_prev)) 
     
     metric_nat_data <- read_xlsx(path_metric_full_prev, sheet = 1)
     metric_state_data <- read_xlsx(path_metric_full_prev, sheet = 2)
-    metric_dl_data <- read_xlsx(path_metric_full_prev, sheet = 3)
+    metric_dl_data <- read_xlsx(path_metric_full_prev, sheet = 3) %>% 
+      mutate(DL.NAME = ifelse(DL.NAME == "Northwest", "Ghaggar", DL.NAME))
     
 
     # previous month's values (for MoM later)
